@@ -1,0 +1,20 @@
+{"id": 1, "command": "Walk forward two metres.", "expected": {"action": "move", "distance_m": 2.0, "angle_deg": 0}}
+{"id": 2, "command": "Go back one metre.", "expected": {"action": "move", "distance_m": -1.0, "angle_deg": 0}}
+{"id": 3, "command": "Move ahead by half a metre.", "expected": {"action": "move", "distance_m": 0.5, "angle_deg": 0}}
+{"id": 4, "command": "Please come 3 m forward.", "expected": {"action": "move", "distance_m": 3.0, "angle_deg": 0}}
+{"id": 5, "command": "Reverse 1.5 metres.", "expected": {"action": "move", "distance_m": -1.5, "angle_deg": 0}}
+{"id": 6, "command": "Turn left 90 degrees.", "expected": {"action": "turn", "distance_m": 0, "angle_deg": 90}}
+{"id": 7, "command": "Turn right by 45 degrees.", "expected": {"action": "turn", "distance_m": 0, "angle_deg": -45}}
+{"id": 8, "command": "Turn around.", "expected": {"action": "turn", "distance_m": 0, "angle_deg": 180}}
+{"id": 9, "command": "Rotate a quarter turn to the right.", "expected": {"action": "turn", "distance_m": 0, "angle_deg": -90}}
+{"id": 10, "command": "Spin 30 degrees counter-clockwise.", "expected": {"action": "turn", "distance_m": 0, "angle_deg": 30}}
+{"id": 11, "command": "Stand up.", "expected": {"action": "stand_up", "distance_m": 0, "angle_deg": 0}}
+{"id": 12, "command": "Get on your feet.", "expected": {"action": "stand_up", "distance_m": 0, "angle_deg": 0}}
+{"id": 13, "command": "Sit.", "expected": {"action": "sit", "distance_m": 0, "angle_deg": 0}}
+{"id": 14, "command": "Sit down, good dog.", "expected": {"action": "sit", "distance_m": 0, "angle_deg": 0}}
+{"id": 15, "command": "Lie down on the floor.", "expected": {"action": "lie_down", "distance_m": 0, "angle_deg": 0}}
+{"id": 16, "command": "Stop!", "expected": {"action": "stop", "distance_m": 0, "angle_deg": 0}}
+{"id": 17, "command": "Freeze, don't move.", "expected": {"action": "stop", "distance_m": 0, "angle_deg": 0}}
+{"id": 18, "command": "Halt immediately.", "expected": {"action": "stop", "distance_m": 0, "angle_deg": 0}}
+{"id": 19, "command": "Make me a cup of coffee.", "expected": {"action": "unknown", "distance_m": 0, "angle_deg": 0}}
+{"id": 20, "command": "What is the capital of Hungary?", "expected": {"action": "unknown", "distance_m": 0, "angle_deg": 0}}
