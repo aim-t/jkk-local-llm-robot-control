@@ -13,6 +13,7 @@ Uses only the Python standard library, so there is nothing to install.
 
 import argparse
 import json
+import os
 import platform
 import statistics
 import time
@@ -20,7 +21,8 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-OLLAMA_URL = "http://localhost:11434"
+# Inside Docker the Mac is reached as host.docker.internal, so the address can be overridden.
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 
 ACTIONS = ["move", "turn", "stand_up", "sit", "lie_down", "stop", "unknown"]

@@ -10,7 +10,7 @@ It is an internship project at the Vehicle Industry Research Center (JKK), Széc
 
 ## Current status
 
-One model runs locally and is measured by a repeatable benchmark. It has not yet been connected to ROS 2 or run on the robot.
+One model runs locally, is measured by a repeatable benchmark, and is connected to ROS 2 through a safety check. It has not yet been run on the robot or connected to the Go2's movement interface.
 
 | Measure | Result |
 |---|---|
@@ -87,6 +87,12 @@ Use your own test file:
 .venv/bin/python src/run_benchmark.py --data data/my_commands.jsonl
 ```
 
+See which saved answers the safety check would block before they reach the robot:
+
+```bash
+.venv/bin/python src/safety.py results/20261012-004724_llama3.2-3b.json
+```
+
 Chat with the model directly, without the robot instructions:
 
 ```bash
@@ -94,6 +100,33 @@ ollama run llama3.2:3b
 ```
 
 To stop Ollama, press Ctrl+C in the terminal running `ollama serve`.
+
+## ROS 2 node
+
+The node listens for text on `/voice_command`, asks the model, applies the safety check, and publishes approved commands on `/go2/command` and refused ones on `/go2/command_blocked`. It does not move a robot.
+
+It runs in the official ROS 2 Humble container, so it needs Docker Desktop running as well as `ollama serve`. Download the image once (260 MB):
+
+```bash
+docker pull ros:humble-ros-base
+```
+
+Start the node from the project folder:
+
+```bash
+docker run --rm -it --name go2_llm -v "$PWD":/ws:ro \
+  -e OLLAMA_URL=http://host.docker.internal:11434 \
+  ros:humble-ros-base python3 /ws/src/go2_command_node.py
+```
+
+In a second terminal, send it a command:
+
+```bash
+docker exec go2_llm bash -c 'source /opt/ros/humble/setup.bash && \
+  ros2 topic pub --once /voice_command std_msgs/msg/String "{data: \"Turn left 90 degrees.\"}"'
+```
+
+The first terminal prints whether the command was approved or blocked. Press Ctrl+C there to stop the node.
 
 ## Test commands
 
@@ -129,9 +162,9 @@ The two larger files label each command with a category (`move`, `turn`, `postur
 ## Next steps
 
 1. Confirm which computer the Go2 carries and how much memory it has.
-2. Score the model on the held-out test commands.
-3. Compare other small models and quantization levels with the same benchmark.
-4. Connect the model's output to ROS 2.
+2. Turn approved commands into the Go2's own movement messages.
+3. Compare permissively licensed models and quantization levels with the same benchmark.
+4. Run the model on the robot's computer.
 5. Fine-tune the best model.
 
 ## Contributing
