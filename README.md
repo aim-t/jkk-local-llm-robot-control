@@ -15,15 +15,15 @@ One model runs locally and is measured by a repeatable benchmark. It has not yet
 | Measure | Result |
 |---|---|
 | Model | Llama 3.2 3B, 4-bit (Q4_K_M), run with Ollama |
-| Correct commands | 20 of 20 |
+| Correct commands | 57 of 60 held-out commands (95%) |
 | Time per command | 0.65 s (median) |
 | Generation speed | 47 tokens per second |
 | Memory used | 2.55 GB |
 | Model file size | 2.02 GB |
 
-Measured on a MacBook Pro (Apple M4, 16 GB memory). The test set is small and was also used to tune the prompt, so the accuracy figure is optimistic. Speed and memory will differ on the robot's own computer.
+Measured on a MacBook Pro (Apple M4, 16 GB memory). The 60 held-out commands were not used to adjust the prompt. Speed and memory will differ on the robot's own computer.
 
-The [progress log](docs/progress-log.md) describes every step taken so far, including the first run that scored 17 of 20 and how it was fixed.
+The [progress log](docs/progress-log.md) describes every step taken so far, including the comparison with three other models.
 
 ## Features
 
