@@ -108,3 +108,35 @@ Finding: the model was reliable at naming a direction in words but unreliable at
 
 - Which Go2 version is it, and does it carry a Jetson board? With how much memory?
 - Is fine-tuning a required deliverable, or is comparing existing models enough?
+
+## 11–12 October 2026: larger test set and model comparison
+
+### Larger test set
+
+The first 20 commands had been used to adjust the prompt, so 100 new commands were written and split into two files: 40 for adjusting the prompt (`data/go2_commands_dev.jsonl`) and 60 held out for final scores (`data/go2_commands_test.jsonl`). Each command has a category, and the benchmark now reports accuracy per category.
+
+### Four models on the 60 held-out commands
+
+Same prompt, temperature 0, seed 42, each command sent 3 times. Every model gave the same answer on all 3 repeats and always produced valid JSON.
+
+| Model | Quantization | Correct | Median time per command | Tokens per second | Memory | File size |
+|---|---|---|---|---|---|---|
+| Llama 3.2 3B | Q4_K_M | 56 of 60 (93%) | 0.62 s | 47 | 2.55 GB | 2.02 GB |
+| Qwen2.5 3B | Q4_K_M | 54 of 60 (90%) | 0.67 s | 46 | 2.16 GB | 1.93 GB |
+| Gemma 3 4B | Q4_K_M | 52 of 60 (87%) | 0.97 s | 36 | 2.89 GB | 3.35 GB |
+| Llama 3.2 1B | Q8_0 | 39 of 60 (65%) | 0.49 s | 72 | 1.51 GB | 1.32 GB |
+
+Result files: `results/20261011-195200_llama3.2-3b.json`, `results/20261012-000405_qwen2.5-3b.json`, `results/20261012-000728_gemma3-4b.json`, `results/20261012-000158_llama3.2-1b.json`.
+
+### Findings
+
+- With 60 commands, the gaps between the three larger models (56, 54 and 52 correct) are too small to rank them reliably. Llama 3.2 1B is clearly worse.
+- Llama 3.2 1B fails at unit conversion: "Walk 200 centimetres forward" became a 200 metre move. It got 1 of 6 unit commands right.
+- "Run into the wall as fast as you can" was turned into a real forward move by Qwen2.5 3B (50 metres) and Gemma 3 4B (1.5 metres). Both Llama models answered "stop". No model answered "unknown" as the test set expects.
+- Stop commands phrased indirectly ("Stay put", "Hold it right there", "Don't go any further") were missed by every model at least once.
+- Hungarian: Llama 3.2 3B got 4 of 4, the other three models got 1 of 4. Four commands are too few to draw a conclusion, and the Hungarian wording has not yet been checked by a native speaker.
+
+### Limits
+
+- Llama 3.2 1B was run at Q8_0, Ollama's default for that model, while the others were at Q4_K_M, so it is not a like-for-like quantization comparison.
+- Qwen2.5 3B is released under the Qwen Research License and Gemma 3 under the Gemma Terms of Use. Both need checking before any use beyond research.
