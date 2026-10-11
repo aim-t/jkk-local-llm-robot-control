@@ -157,7 +157,8 @@ def main():
     parser.add_argument("--repeats", type=int, default=3, help="times each command is sent")
     args = parser.parse_args()
 
-    cases = [json.loads(line) for line in Path(args.data).read_text().splitlines() if line.strip()]
+    lines = Path(args.data).read_text(encoding="utf-8").splitlines()
+    cases = [json.loads(line) for line in lines if line.strip()]
 
     # The first request loads the model into memory, which is slow, so it is timed separately.
     warmup = ask(args.model, "Stand up.")
@@ -186,6 +187,12 @@ def main():
         "median_tokens_per_s": median("tokens_per_s"),
         "cold_load_s": round(warmup["load_s"], 2),
     }
+    # Per-category scores show where a model is weak (e.g. good at "stop", bad at units).
+    categories = sorted({row["category"] for row in rows if "category" in row})
+    by_category = {}
+    for category in categories:
+        scores = [row["correct"] for row in rows if row.get("category") == category]
+        by_category[category] = round(sum(scores) / len(scores), 3)
     report = {
         "timestamp": datetime.now().isoformat(timespec="seconds"),
         "model": model_facts(args.model),
@@ -194,6 +201,7 @@ def main():
         "settings": {"temperature": 0, "seed": 42, "repeats": args.repeats, "data": Path(args.data).name},
         "system_prompt": SYSTEM_PROMPT,
         "summary": summary,
+        "accuracy_by_category": by_category,
         "rows": rows,
     }
 
@@ -206,6 +214,10 @@ def main():
     print("\nSummary")
     for key, value in {**report["model"], **summary}.items():
         print(f"  {key:<22} {value}")
+    if by_category:
+        print("\nAccuracy by category")
+        for category, score in by_category.items():
+            print(f"  {category:<22} {score}")
     print(f"\nSaved to {out_file.relative_to(PROJECT_DIR)}")
 
 

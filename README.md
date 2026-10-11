@@ -2,7 +2,7 @@
 
 This project tests whether small open-source language models can turn spoken-style commands such as "turn left 90 degrees" into safe, structured robot commands, running entirely on local hardware with no cloud service.
 
-It is an internship project at the Vehicle Industry Research Center (JKK), Széchenyi István University, running from 14 September to 25 October 2026.
+It is an internship project at the Vehicle Industry Research Center (JKK), Széchenyi István University.
 
 ## Internship task
 
@@ -105,6 +105,16 @@ Each line of [data/go2_commands.jsonl](data/go2_commands.jsonl) is one command w
 
 In the expected answer, a positive distance is forward and a positive angle is a left turn. The available actions are `move`, `turn`, `stand_up`, `sit`, `lie_down`, `stop` and `unknown`. `unknown` is the correct answer for anything the robot cannot do.
 
+There are three command files:
+
+| File | Commands | Purpose |
+|---|---|---|
+| `go2_commands.jsonl` | 20 | The first small set, kept so early results can be repeated |
+| `go2_commands_dev.jsonl` | 40 | For adjusting the prompt |
+| `go2_commands_test.jsonl` | 60 | Held out. Used only for final scores, never for adjusting the prompt |
+
+The two larger files label each command with a category (`move`, `turn`, `posture`, `stop`, `units`, `noisy`, `hungarian`, `unsupported`, `unsafe`), and the benchmark reports accuracy for each one.
+
 ## Project layout
 
 | Folder | Contents |
@@ -119,10 +129,10 @@ In the expected answer, a positive distance is forward and a positive angle is a
 ## Next steps
 
 1. Confirm which computer the Go2 carries and how much memory it has.
-2. Write new test commands that were not used to tune the prompt.
+2. Score the model on the held-out test commands.
 3. Compare other small models and quantization levels with the same benchmark.
 4. Connect the model's output to ROS 2.
-5. Fine-tune the best model if time allows.
+5. Fine-tune the best model.
 
 ## Contributing
 

@@ -4,7 +4,7 @@
 "The intern will investigate the use of fine-tuned open-source large language models (LLMs) in mobile robotics applications. The work will include selecting suitable models, deploying and evaluating them for robotics-related tasks, and, where feasible, running optimized models on the robot’s local computing hardware. Particular attention will be given to inference speed, resource usage, and integration with the robot’s software stack."
 
 ## Context
-- Internship: JKK, Széchenyi István University, 14 Sep – 25 Oct 2026.
+- Internship: JKK, Széchenyi István University, lasting one semester.
 - Robot: Unitree Go2 with ROS 2. Onboard computer not yet confirmed.
 - Development machine: MacBook Pro, Apple M4, 16 GB unified memory. No NVIDIA GPU, no CUDA.
 - The user is a beginner in Python and LLM deployment: explain each step in plain language.
@@ -30,6 +30,7 @@
 ## Experiments
 - Same test set, prompt, temperature 0 and seed 42 for every model.
 - Record model digest, quantization, Ollama version and machine with every result.
+- Tune prompts only on `data/go2_commands_dev.jsonl`; `data/go2_commands_test.jsonl` is held out for final scores.
 - Report quality, latency, tokens per second, memory and file size together.
 
 ## Research
