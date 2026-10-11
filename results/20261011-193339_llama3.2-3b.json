@@ -1,0 +1,1186 @@
+{
+  "timestamp": "2026-10-11T19:33:39",
+  "model": {
+    "name": "llama3.2:3b",
+    "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72",
+    "file_size_gb": 2.02,
+    "parent_model": "",
+    "format": "gguf",
+    "family": "llama",
+    "families": [
+      "llama"
+    ],
+    "parameter_size": "3.2B",
+    "quantization_level": "Q4_K_M",
+    "context_length": 131072,
+    "embedding_length": 3072,
+    "runner": "ggml",
+    "memory_loaded_gb": 2.55,
+    "memory_on_gpu_gb": 2.55
+  },
+  "ollama_version": "0.40.2",
+  "machine": {
+    "platform": "macOS-15.6.1-arm64-arm-64bit",
+    "processor": "arm"
+  },
+  "settings": {
+    "temperature": 0,
+    "seed": 42,
+    "repeats": 3,
+    "data": "go2_commands.jsonl"
+  },
+  "system_prompt": "You translate a human command for a four-legged robot dog into one JSON object.\n\nFields:\n- \"action\": one of move, turn, stand_up, sit, lie_down, stop, unknown\n- \"distance_m\": metres to walk. Positive = forward, negative = backward. 0 unless action is move.\n- \"direction\": \"left\" (counter-clockwise) or \"right\" (clockwise) when action is turn, otherwise \"none\".\n- \"angle_deg\": degrees to rotate, always a positive number. 0 unless action is turn.\n\nRules:\n- \"turn around\" means direction \"left\" and angle_deg 180.\n- If the command is not something the robot can do with these actions, use action \"unknown\".\n- Reply with the JSON object only.",
+  "summary": {
+    "commands": 20,
+    "requests": 60,
+    "valid_json_rate": 1.0,
+    "accuracy": 1.0,
+    "median_first_token_s": 0.029,
+    "median_total_s": 0.626,
+    "max_total_s": 0.792,
+    "median_tokens_per_s": 46.857,
+    "cold_load_s": 0.0
+  },
+  "rows": [
+    {
+      "id": 1,
+      "command": "Walk forward two metres.",
+      "expected": {
+        "action": "move",
+        "distance_m": 2.0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": 2, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.0770779170015885,
+      "total_s": 0.673778708998725,
+      "load_s": 0.00177925,
+      "prompt_tokens": 190,
+      "output_tokens": 27,
+      "tokens_per_s": 45.25212978310822
+    },
+    {
+      "id": 1,
+      "command": "Walk forward two metres.",
+      "expected": {
+        "action": "move",
+        "distance_m": 2.0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": 2, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.0294186669998453,
+      "total_s": 0.6245347500007483,
+      "load_s": 0.00160175,
+      "prompt_tokens": 190,
+      "output_tokens": 27,
+      "tokens_per_s": 45.36259836963462
+    },
+    {
+      "id": 1,
+      "command": "Walk forward two metres.",
+      "expected": {
+        "action": "move",
+        "distance_m": 2.0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": 2, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.029508042000088608,
+      "total_s": 0.6141680830005498,
+      "load_s": 0.001387,
+      "prompt_tokens": 190,
+      "output_tokens": 27,
+      "tokens_per_s": 46.1760264332098
+    },
+    {
+      "id": 2,
+      "command": "Go back one metre.",
+      "expected": {
+        "action": "move",
+        "distance_m": -1.0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": -1, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.07622341699971003,
+      "total_s": 0.6685882919991855,
+      "load_s": 0.001493167,
+      "prompt_tokens": 190,
+      "output_tokens": 27,
+      "tokens_per_s": 45.60086742983378
+    },
+    {
+      "id": 2,
+      "command": "Go back one metre.",
+      "expected": {
+        "action": "move",
+        "distance_m": -1.0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": -1, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.030643541998870205,
+      "total_s": 0.6155139170004986,
+      "load_s": 0.001715042,
+      "prompt_tokens": 190,
+      "output_tokens": 27,
+      "tokens_per_s": 46.056694084614676
+    },
+    {
+      "id": 2,
+      "command": "Go back one metre.",
+      "expected": {
+        "action": "move",
+        "distance_m": -1.0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": -1, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.0287564160025795,
+      "total_s": 0.6161056660021131,
+      "load_s": 0.002104958,
+      "prompt_tokens": 190,
+      "output_tokens": 27,
+      "tokens_per_s": 45.965740201636386
+    },
+    {
+      "id": 3,
+      "command": "Move ahead by half a metre.",
+      "expected": {
+        "action": "move",
+        "distance_m": 0.5,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": 0.5, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.07778529200004414,
+      "total_s": 0.6924604170017119,
+      "load_s": 0.001669792,
+      "prompt_tokens": 192,
+      "output_tokens": 29,
+      "tokens_per_s": 47.184470126535736
+    },
+    {
+      "id": 3,
+      "command": "Move ahead by half a metre.",
+      "expected": {
+        "action": "move",
+        "distance_m": 0.5,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": 0.5, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.029487957999663195,
+      "total_s": 0.6430833749982412,
+      "load_s": 0.001714458,
+      "prompt_tokens": 192,
+      "output_tokens": 29,
+      "tokens_per_s": 47.221503044158624
+    },
+    {
+      "id": 3,
+      "command": "Move ahead by half a metre.",
+      "expected": {
+        "action": "move",
+        "distance_m": 0.5,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": 0.5, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.02922295800090069,
+      "total_s": 0.6465728750008566,
+      "load_s": 0.001470083,
+      "prompt_tokens": 192,
+      "output_tokens": 29,
+      "tokens_per_s": 46.93863016891432
+    },
+    {
+      "id": 4,
+      "command": "Please come 3 m forward.",
+      "expected": {
+        "action": "move",
+        "distance_m": 3.0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\n  \"action\": \"move\",\n  \"distance_m\": 3,\n  \"direction\": \"none\",\n  \"angle_deg\": 0\n}",
+      "first_token_s": 0.07653854100135504,
+      "total_s": 0.7918384580007114,
+      "load_s": 0.0017765,
+      "prompt_tokens": 192,
+      "output_tokens": 33,
+      "tokens_per_s": 46.14087508266907
+    },
+    {
+      "id": 4,
+      "command": "Please come 3 m forward.",
+      "expected": {
+        "action": "move",
+        "distance_m": 3.0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\n  \"action\": \"move\",\n  \"distance_m\": 3,\n  \"direction\": \"none\",\n  \"angle_deg\": 0\n}",
+      "first_token_s": 0.028526458001579158,
+      "total_s": 0.7512085830021533,
+      "load_s": 0.001660417,
+      "prompt_tokens": 192,
+      "output_tokens": 33,
+      "tokens_per_s": 45.65862567536717
+    },
+    {
+      "id": 4,
+      "command": "Please come 3 m forward.",
+      "expected": {
+        "action": "move",
+        "distance_m": 3.0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\n  \"action\": \"move\",\n  \"distance_m\": 3,\n  \"direction\": \"none\",\n  \"angle_deg\": 0\n}",
+      "first_token_s": 0.027883208000275772,
+      "total_s": 0.7491829579994373,
+      "load_s": 0.00139475,
+      "prompt_tokens": 192,
+      "output_tokens": 33,
+      "tokens_per_s": 45.74470297132639
+    },
+    {
+      "id": 5,
+      "command": "Reverse 1.5 metres.",
+      "expected": {
+        "action": "move",
+        "distance_m": -1.5,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": -1.5, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.07763237499966635,
+      "total_s": 0.7244891250011278,
+      "load_s": 0.001708167,
+      "prompt_tokens": 192,
+      "output_tokens": 29,
+      "tokens_per_s": 44.83514580698624
+    },
+    {
+      "id": 5,
+      "command": "Reverse 1.5 metres.",
+      "expected": {
+        "action": "move",
+        "distance_m": -1.5,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": -1.5, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.028693207998003345,
+      "total_s": 0.6748340829981316,
+      "load_s": 0.001540167,
+      "prompt_tokens": 192,
+      "output_tokens": 29,
+      "tokens_per_s": 44.889139304930374
+    },
+    {
+      "id": 5,
+      "command": "Reverse 1.5 metres.",
+      "expected": {
+        "action": "move",
+        "distance_m": -1.5,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"move\", \"distance_m\": -1.5, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.02811366600144538,
+      "total_s": 0.6725630830005684,
+      "load_s": 0.00153625,
+      "prompt_tokens": 192,
+      "output_tokens": 29,
+      "tokens_per_s": 44.989419729567054
+    },
+    {
+      "id": 6,
+      "command": "Turn left 90 degrees.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": 90
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"left\", \"angle_deg\": 90}",
+      "first_token_s": 0.07594191700263764,
+      "total_s": 0.6558159580017673,
+      "load_s": 0.0013305,
+      "prompt_tokens": 191,
+      "output_tokens": 27,
+      "tokens_per_s": 46.57123587986001
+    },
+    {
+      "id": 6,
+      "command": "Turn left 90 degrees.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": 90
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"left\", \"angle_deg\": 90}",
+      "first_token_s": 0.028643792000366375,
+      "total_s": 0.6081415840017144,
+      "load_s": 0.001627042,
+      "prompt_tokens": 191,
+      "output_tokens": 27,
+      "tokens_per_s": 46.59132676568186
+    },
+    {
+      "id": 6,
+      "command": "Turn left 90 degrees.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": 90
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"left\", \"angle_deg\": 90}",
+      "first_token_s": 0.02817812500143191,
+      "total_s": 0.629036583002744,
+      "load_s": 0.001652375,
+      "prompt_tokens": 191,
+      "output_tokens": 27,
+      "tokens_per_s": 44.92908692447087
+    },
+    {
+      "id": 7,
+      "command": "Turn right by 45 degrees.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": -45
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"right\", \"angle_deg\": 45}",
+      "first_token_s": 0.07640383300167741,
+      "total_s": 0.6642458749993239,
+      "load_s": 0.001524917,
+      "prompt_tokens": 192,
+      "output_tokens": 27,
+      "tokens_per_s": 45.937351660635265
+    },
+    {
+      "id": 7,
+      "command": "Turn right by 45 degrees.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": -45
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"right\", \"angle_deg\": 45}",
+      "first_token_s": 0.028476334002334625,
+      "total_s": 0.6166746669987333,
+      "load_s": 0.001788375,
+      "prompt_tokens": 192,
+      "output_tokens": 27,
+      "tokens_per_s": 45.902051821716434
+    },
+    {
+      "id": 7,
+      "command": "Turn right by 45 degrees.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": -45
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"right\", \"angle_deg\": 45}",
+      "first_token_s": 0.029883250001148554,
+      "total_s": 0.6160647080032504,
+      "load_s": 0.00175125,
+      "prompt_tokens": 192,
+      "output_tokens": 27,
+      "tokens_per_s": 46.0592868316499
+    },
+    {
+      "id": 8,
+      "command": "Turn around.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": 180
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"left\", \"angle_deg\": 180}",
+      "first_token_s": 0.11276579100012896,
+      "total_s": 0.7110734160014545,
+      "load_s": 0.001590458,
+      "prompt_tokens": 188,
+      "output_tokens": 27,
+      "tokens_per_s": 45.12816398571944
+    },
+    {
+      "id": 8,
+      "command": "Turn around.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": 180
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"left\", \"angle_deg\": 180}",
+      "first_token_s": 0.029655792000994552,
+      "total_s": 0.6158493340008135,
+      "load_s": 0.001369334,
+      "prompt_tokens": 188,
+      "output_tokens": 27,
+      "tokens_per_s": 46.06620225110175
+    },
+    {
+      "id": 8,
+      "command": "Turn around.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": 180
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"left\", \"angle_deg\": 180}",
+      "first_token_s": 0.027799167000921443,
+      "total_s": 0.605701250002312,
+      "load_s": 0.001413834,
+      "prompt_tokens": 188,
+      "output_tokens": 27,
+      "tokens_per_s": 46.70407605499319
+    },
+    {
+      "id": 9,
+      "command": "Rotate a quarter turn to the right.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": -90
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"right\", \"angle_deg\": 90}",
+      "first_token_s": 0.0798828750012035,
+      "total_s": 0.6675351250014501,
+      "load_s": 0.001445875,
+      "prompt_tokens": 193,
+      "output_tokens": 27,
+      "tokens_per_s": 45.9583855329811
+    },
+    {
+      "id": 9,
+      "command": "Rotate a quarter turn to the right.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": -90
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"right\", \"angle_deg\": 90}",
+      "first_token_s": 0.028465417002735194,
+      "total_s": 0.6215409590004128,
+      "load_s": 0.00177875,
+      "prompt_tokens": 193,
+      "output_tokens": 27,
+      "tokens_per_s": 45.523981021558136
+    },
+    {
+      "id": 9,
+      "command": "Rotate a quarter turn to the right.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": -90
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"right\", \"angle_deg\": 90}",
+      "first_token_s": 0.028359833999274997,
+      "total_s": 0.6076750840002205,
+      "load_s": 0.001757709,
+      "prompt_tokens": 193,
+      "output_tokens": 27,
+      "tokens_per_s": 46.59582950068254
+    },
+    {
+      "id": 10,
+      "command": "Spin 30 degrees counter-clockwise.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": 30
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"left\", \"angle_deg\": 30}",
+      "first_token_s": 0.07779970799674629,
+      "total_s": 0.6490738749998854,
+      "load_s": 0.001547416,
+      "prompt_tokens": 193,
+      "output_tokens": 27,
+      "tokens_per_s": 47.270645454402214
+    },
+    {
+      "id": 10,
+      "command": "Spin 30 degrees counter-clockwise.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": 30
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"left\", \"angle_deg\": 30}",
+      "first_token_s": 0.03056608299812069,
+      "total_s": 0.6121676670009037,
+      "load_s": 0.001755375,
+      "prompt_tokens": 193,
+      "output_tokens": 27,
+      "tokens_per_s": 46.48848376949288
+    },
+    {
+      "id": 10,
+      "command": "Spin 30 degrees counter-clockwise.",
+      "expected": {
+        "action": "turn",
+        "distance_m": 0,
+        "angle_deg": 30
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"turn\", \"distance_m\": 0, \"direction\": \"left\", \"angle_deg\": 30}",
+      "first_token_s": 0.029223792000266258,
+      "total_s": 0.5995613750019402,
+      "load_s": 0.001337959,
+      "prompt_tokens": 193,
+      "output_tokens": 27,
+      "tokens_per_s": 47.33578427505246
+    },
+    {
+      "id": 11,
+      "command": "Stand up.",
+      "expected": {
+        "action": "stand_up",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stand_up\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.12020595900321496,
+      "total_s": 0.7303927500033751,
+      "load_s": 0.0017065,
+      "prompt_tokens": 188,
+      "output_tokens": 28,
+      "tokens_per_s": 45.88915147681123
+    },
+    {
+      "id": 11,
+      "command": "Stand up.",
+      "expected": {
+        "action": "stand_up",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stand_up\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.028022083002724685,
+      "total_s": 0.6222792910011776,
+      "load_s": 0.00160675,
+      "prompt_tokens": 188,
+      "output_tokens": 28,
+      "tokens_per_s": 47.11520340306383
+    },
+    {
+      "id": 11,
+      "command": "Stand up.",
+      "expected": {
+        "action": "stand_up",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stand_up\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.02779874999760068,
+      "total_s": 0.6137955409976712,
+      "load_s": 0.001723042,
+      "prompt_tokens": 188,
+      "output_tokens": 28,
+      "tokens_per_s": 47.77268392056768
+    },
+    {
+      "id": 12,
+      "command": "Get on your feet.",
+      "expected": {
+        "action": "stand_up",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stand_up\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.0768787919987517,
+      "total_s": 0.6697972920010216,
+      "load_s": 0.00167125,
+      "prompt_tokens": 190,
+      "output_tokens": 28,
+      "tokens_per_s": 47.235540020311284
+    },
+    {
+      "id": 12,
+      "command": "Get on your feet.",
+      "expected": {
+        "action": "stand_up",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stand_up\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.02814799999759998,
+      "total_s": 0.6219326669997827,
+      "load_s": 0.001665708,
+      "prompt_tokens": 190,
+      "output_tokens": 28,
+      "tokens_per_s": 47.13876136170413
+    },
+    {
+      "id": 12,
+      "command": "Get on your feet.",
+      "expected": {
+        "action": "stand_up",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stand_up\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.028027041000314057,
+      "total_s": 0.6147541249993083,
+      "load_s": 0.0016365,
+      "prompt_tokens": 190,
+      "output_tokens": 28,
+      "tokens_per_s": 47.72025025862671
+    },
+    {
+      "id": 13,
+      "command": "Sit.",
+      "expected": {
+        "action": "sit",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"sit\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.1093087920016842,
+      "total_s": 0.6797798330007936,
+      "load_s": 0.001644875,
+      "prompt_tokens": 187,
+      "output_tokens": 27,
+      "tokens_per_s": 47.33777607128017
+    },
+    {
+      "id": 13,
+      "command": "Sit.",
+      "expected": {
+        "action": "sit",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"sit\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.028700250000838423,
+      "total_s": 0.6005895420021261,
+      "load_s": 0.001910667,
+      "prompt_tokens": 187,
+      "output_tokens": 27,
+      "tokens_per_s": 47.209069736538424
+    },
+    {
+      "id": 13,
+      "command": "Sit.",
+      "expected": {
+        "action": "sit",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"sit\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.027903584003070137,
+      "total_s": 0.5951511670027685,
+      "load_s": 0.001639916,
+      "prompt_tokens": 187,
+      "output_tokens": 27,
+      "tokens_per_s": 47.59210394115501
+    },
+    {
+      "id": 14,
+      "command": "Sit down, good dog.",
+      "expected": {
+        "action": "sit",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"sit\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.07673158299803617,
+      "total_s": 0.6460499169988907,
+      "load_s": 0.001697333,
+      "prompt_tokens": 191,
+      "output_tokens": 27,
+      "tokens_per_s": 47.433329819753354
+    },
+    {
+      "id": 14,
+      "command": "Sit down, good dog.",
+      "expected": {
+        "action": "sit",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"sit\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.02863699999943492,
+      "total_s": 0.6003416669991566,
+      "load_s": 0.001631875,
+      "prompt_tokens": 191,
+      "output_tokens": 27,
+      "tokens_per_s": 47.20931737075575
+    },
+    {
+      "id": 14,
+      "command": "Sit down, good dog.",
+      "expected": {
+        "action": "sit",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"sit\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.02814116699664737,
+      "total_s": 0.5989333329998772,
+      "load_s": 0.001634833,
+      "prompt_tokens": 191,
+      "output_tokens": 27,
+      "tokens_per_s": 47.301037819807576
+    },
+    {
+      "id": 15,
+      "command": "Lie down on the floor.",
+      "expected": {
+        "action": "lie_down",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"lie_down\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.07684995799718308,
+      "total_s": 0.6687074999972538,
+      "load_s": 0.001617417,
+      "prompt_tokens": 191,
+      "output_tokens": 28,
+      "tokens_per_s": 47.3152003460769
+    },
+    {
+      "id": 15,
+      "command": "Lie down on the floor.",
+      "expected": {
+        "action": "lie_down",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"lie_down\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.0322631659983017,
+      "total_s": 0.6280867909990775,
+      "load_s": 0.00164375,
+      "prompt_tokens": 191,
+      "output_tokens": 28,
+      "tokens_per_s": 46.871338176704946
+    },
+    {
+      "id": 15,
+      "command": "Lie down on the floor.",
+      "expected": {
+        "action": "lie_down",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"lie_down\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.02776166699914029,
+      "total_s": 0.6129954999996698,
+      "load_s": 0.001555042,
+      "prompt_tokens": 191,
+      "output_tokens": 28,
+      "tokens_per_s": 47.84067687723399
+    },
+    {
+      "id": 16,
+      "command": "Stop!",
+      "expected": {
+        "action": "stop",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stop\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.10976670799936983,
+      "total_s": 0.679509000001417,
+      "load_s": 0.001613583,
+      "prompt_tokens": 187,
+      "output_tokens": 27,
+      "tokens_per_s": 47.39269941794744
+    },
+    {
+      "id": 16,
+      "command": "Stop!",
+      "expected": {
+        "action": "stop",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stop\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.028536290999909397,
+      "total_s": 0.6026901660006843,
+      "load_s": 0.002376917,
+      "prompt_tokens": 187,
+      "output_tokens": 27,
+      "tokens_per_s": 47.02571087199601
+    },
+    {
+      "id": 16,
+      "command": "Stop!",
+      "expected": {
+        "action": "stop",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stop\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.027980625000054715,
+      "total_s": 0.5925412500000675,
+      "load_s": 0.001340833,
+      "prompt_tokens": 187,
+      "output_tokens": 27,
+      "tokens_per_s": 47.823838234981544
+    },
+    {
+      "id": 17,
+      "command": "Freeze, don't move.",
+      "expected": {
+        "action": "stop",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stop\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.07798879199981457,
+      "total_s": 0.6487129999986792,
+      "load_s": 0.001759875,
+      "prompt_tokens": 192,
+      "output_tokens": 27,
+      "tokens_per_s": 47.309740374658105
+    },
+    {
+      "id": 17,
+      "command": "Freeze, don't move.",
+      "expected": {
+        "action": "stop",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stop\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.028135625001596054,
+      "total_s": 0.5994036250012869,
+      "load_s": 0.001744791,
+      "prompt_tokens": 192,
+      "output_tokens": 27,
+      "tokens_per_s": 47.25674590047729
+    },
+    {
+      "id": 17,
+      "command": "Freeze, don't move.",
+      "expected": {
+        "action": "stop",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stop\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.028229292001924478,
+      "total_s": 0.5926157920002879,
+      "load_s": 0.0017925,
+      "prompt_tokens": 192,
+      "output_tokens": 27,
+      "tokens_per_s": 47.834344350586775
+    },
+    {
+      "id": 18,
+      "command": "Halt immediately.",
+      "expected": {
+        "action": "stop",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stop\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.07669195899870829,
+      "total_s": 0.6466491669998504,
+      "load_s": 0.00155875,
+      "prompt_tokens": 189,
+      "output_tokens": 27,
+      "tokens_per_s": 47.37856172724688
+    },
+    {
+      "id": 18,
+      "command": "Halt immediately.",
+      "expected": {
+        "action": "stop",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stop\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.027936375001445413,
+      "total_s": 0.5995823330013081,
+      "load_s": 0.001725834,
+      "prompt_tokens": 189,
+      "output_tokens": 27,
+      "tokens_per_s": 47.22632780318865
+    },
+    {
+      "id": 18,
+      "command": "Halt immediately.",
+      "expected": {
+        "action": "stop",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"stop\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.028207041999849025,
+      "total_s": 0.5929917089997616,
+      "load_s": 0.001747042,
+      "prompt_tokens": 189,
+      "output_tokens": 27,
+      "tokens_per_s": 47.806648665397724
+    },
+    {
+      "id": 19,
+      "command": "Make me a cup of coffee.",
+      "expected": {
+        "action": "unknown",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\n  \"action\": \"unknown\",\n  \"distance_m\": 0,\n  \"direction\": \"none\",\n  \"angle_deg\": 0\n}",
+      "first_token_s": 0.0776039580014185,
+      "total_s": 0.7820327920017007,
+      "load_s": 0.001695667,
+      "prompt_tokens": 192,
+      "output_tokens": 33,
+      "tokens_per_s": 46.85716233024928
+    },
+    {
+      "id": 19,
+      "command": "Make me a cup of coffee.",
+      "expected": {
+        "action": "unknown",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\n  \"action\": \"unknown\",\n  \"distance_m\": 0,\n  \"direction\": \"none\",\n  \"angle_deg\": 0\n}",
+      "first_token_s": 0.02808191700023599,
+      "total_s": 0.7404698329992243,
+      "load_s": 0.00157725,
+      "prompt_tokens": 192,
+      "output_tokens": 33,
+      "tokens_per_s": 46.320405261436576
+    },
+    {
+      "id": 19,
+      "command": "Make me a cup of coffee.",
+      "expected": {
+        "action": "unknown",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\n  \"action\": \"unknown\",\n  \"distance_m\": 0,\n  \"direction\": \"none\",\n  \"angle_deg\": 0\n}",
+      "first_token_s": 0.029356499999266816,
+      "total_s": 0.7431870000000345,
+      "load_s": 0.001429875,
+      "prompt_tokens": 192,
+      "output_tokens": 33,
+      "tokens_per_s": 46.22768113546392
+    },
+    {
+      "id": 20,
+      "command": "What is the capital of Hungary?",
+      "expected": {
+        "action": "unknown",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 0,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"unknown\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.0773349999981292,
+      "total_s": 0.6604479999987234,
+      "load_s": 0.001596875,
+      "prompt_tokens": 192,
+      "output_tokens": 27,
+      "tokens_per_s": 46.30709493297476
+    },
+    {
+      "id": 20,
+      "command": "What is the capital of Hungary?",
+      "expected": {
+        "action": "unknown",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 1,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"unknown\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.02799474999847007,
+      "total_s": 0.6041305830003694,
+      "load_s": 0.001504333,
+      "prompt_tokens": 192,
+      "output_tokens": 27,
+      "tokens_per_s": 46.8572658264754
+    },
+    {
+      "id": 20,
+      "command": "What is the capital of Hungary?",
+      "expected": {
+        "action": "unknown",
+        "distance_m": 0,
+        "angle_deg": 0
+      },
+      "repeat": 2,
+      "valid_json": true,
+      "correct": true,
+      "reply": "{\"action\": \"unknown\", \"distance_m\": 0, \"direction\": \"none\", \"angle_deg\": 0}",
+      "first_token_s": 0.028501124998001615,
+      "total_s": 0.5943407919985475,
+      "load_s": 0.001726833,
+      "prompt_tokens": 192,
+      "output_tokens": 27,
+      "tokens_per_s": 47.71456089349934
+    }
+  ]
+}

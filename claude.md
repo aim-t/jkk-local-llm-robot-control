@@ -1,17 +1,38 @@
-Before making any changes, inspect my currently open project workspace.
+# JKK Internship Project
 
-My internship task description must remain exactly as written below:
-
+## Task (do not reword)
 "The intern will investigate the use of fine-tuned open-source large language models (LLMs) in mobile robotics applications. The work will include selecting suitable models, deploying and evaluating them for robotics-related tasks, and, where feasible, running optimized models on the robot’s local computing hardware. Particular attention will be given to inference speed, resource usage, and integration with the robot’s software stack."
 
-My computer is a MacBook Pro with an Apple M4 chip and 16 GB unified memory. I am a beginner in Python and LLM deployment, so explain technical concepts step by step.
+## Context
+- Internship: JKK, Széchenyi István University, 14 Sep – 25 Oct 2026.
+- Robot: Unitree Go2 with ROS 2. Onboard computer not yet confirmed.
+- Development machine: MacBook Pro, Apple M4, 16 GB unified memory. No NVIDIA GPU, no CUDA.
+- The user is a beginner in Python and LLM deployment: explain each step in plain language.
 
-Please do the following:
+## Rules
+- Ask before installing packages, downloading models, or changing anything outside this folder.
+- Never delete, overwrite, move or reorganise existing files without approval.
+- Show each system-changing command and say what it does before running it.
 
-1. Inspect the existing files and folders. Do not modify or delete anything during this inspection.
-2. Explain what is already in the workspace and identify anything important that is missing.
-3. Recommend a project-specific CLAUDE.md file that includes my exact internship task, my computer specifications, beginner-friendly guidance, research citation standards, reproducible experiments, and rules requiring my approval before installing packages, downloading large models, or making potentially destructive changes.
-4. Show me the proposed contents of CLAUDE.md before creating it.
-5. Do not start coding, downloading models, installing software, or reorganizing files yet.
+## Tools
+- Models run through Ollama (GGUF format). Start it with `ollama serve`.
+- Python lives in `.venv` (Python 3.12, created with `uv`). Run scripts with `.venv/bin/python`.
+- Benchmark: `.venv/bin/python src/run_benchmark.py --model <name>`.
 
-Wait for my approval before creating or changing any files.
+## Folders
+- research/ papers and the literature spreadsheet
+- data/ test commands
+- src/ code
+- experiments/ experiment notes and configurations
+- results/ one JSON file per benchmark run; never edit these by hand
+- docs/ reports
+
+## Experiments
+- Same test set, prompt, temperature 0 and seed 42 for every model.
+- Record model digest, quantization, Ollama version and machine with every result.
+- Report quality, latency, tokens per second, memory and file size together.
+
+## Research
+- Separate verified facts from hypotheses.
+- Cite real paper titles with working links; check each link before citing.
+- Do not rely on auto-generated summaries; read the paper.

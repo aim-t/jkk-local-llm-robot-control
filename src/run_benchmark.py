@@ -1,7 +1,7 @@
 """Send robot commands to a local LLM (through Ollama) and measure how well and how fast it answers.
 
 For every command in the test set the model must reply with one JSON object such as
-{"action": "move", "distance_m": 2.0, "angle_deg": 0}. We record whether the reply is
+{"action": "move", "distance_m": 2.0, "direction": "none", "angle_deg": 0}. We record whether the reply is
 correct, how long it took, and how much memory the model uses.
 
 Run from the project folder:
@@ -31,9 +31,10 @@ ANSWER_SCHEMA = {
     "properties": {
         "action": {"type": "string", "enum": ACTIONS},
         "distance_m": {"type": "number"},
+        "direction": {"type": "string", "enum": ["left", "right", "none"]},
         "angle_deg": {"type": "number"},
     },
-    "required": ["action", "distance_m", "angle_deg"],
+    "required": ["action", "distance_m", "direction", "angle_deg"],
 }
 
 SYSTEM_PROMPT = """You translate a human command for a four-legged robot dog into one JSON object.
@@ -41,10 +42,11 @@ SYSTEM_PROMPT = """You translate a human command for a four-legged robot dog int
 Fields:
 - "action": one of move, turn, stand_up, sit, lie_down, stop, unknown
 - "distance_m": metres to walk. Positive = forward, negative = backward. 0 unless action is move.
-- "angle_deg": degrees to rotate. Positive = left (counter-clockwise), negative = right (clockwise). 0 unless action is turn.
+- "direction": "left" (counter-clockwise) or "right" (clockwise) when action is turn, otherwise "none".
+- "angle_deg": degrees to rotate, always a positive number. 0 unless action is turn.
 
 Rules:
-- "turn around" means angle_deg 180.
+- "turn around" means direction "left" and angle_deg 180.
 - If the command is not something the robot can do with these actions, use action "unknown".
 - Reply with the JSON object only."""
 
@@ -104,6 +106,17 @@ def ask(model, command):
     }
 
 
+def signed_angle(got):
+    """Turn the model's word ("left"/"right") into the robot's sign: left = positive, right = negative.
+
+    The model is unreliable at remembering a sign rule, so the code applies it instead.
+    """
+    angle = abs(float(got.get("angle_deg", 0)))
+    if angle == 180:  # a half turn ends up facing the same way whichever side it goes
+        return 180.0
+    return -angle if got.get("direction") == "right" else angle
+
+
 def is_correct(reply, expected):
     """Return (valid_json, correct). Numbers may differ by a tiny rounding amount."""
     try:
@@ -113,9 +126,9 @@ def is_correct(reply, expected):
     if not isinstance(got, dict) or got.get("action") != expected["action"]:
         return isinstance(got, dict), False
     try:
-        same_numbers = all(
-            abs(float(got.get(key, 0)) - expected[key]) < 0.01
-            for key in ("distance_m", "angle_deg")
+        same_numbers = (
+            abs(float(got.get("distance_m", 0)) - expected["distance_m"]) < 0.01
+            and abs(signed_angle(got) - expected["angle_deg"]) < 0.01
         )
     except (TypeError, ValueError):
         same_numbers = False
