@@ -106,7 +106,7 @@ Finding: the model was reliable at naming a direction in words but unreliable at
 
 ## Open questions
 
-- Which Go2 version is it, and does it carry a Jetson board? With how much memory?
+- Which Go2 version is it, and does it carry a Jetson board? With how much memory? (Answered on 12 October 2026 except for the memory size; see the entry for that date.)
 - Is fine-tuning a required deliverable, or is comparing existing models enough?
 
 ## 11–12 October 2026: larger test set and model comparison
@@ -241,3 +241,40 @@ All six behaved as intended. The time is measured inside the node, from receivin
 - Humble was chosen on the unverified assumption that it matches the lab's Go2 software.
 - A stop command takes about 0.7 s through the model. A real robot should also have a stop path that does not wait for the model.
 - The model ran on the Mac, outside the container. On the robot it would run on the onboard computer.
+
+## 12 October 2026: robot details confirmed and /cmd_vel node
+
+### Confirmed by the mentor
+
+- Robot: Unitree Go2 Edu with an NVIDIA Jetson Orin Nano.
+- The lab uses ROS 2 Humble and Jazzy. The robot runs Jazzy.
+- Movement can be commanded with Twist messages on the `/cmd_vel` topic.
+
+Still open: the Jetson's memory size and software version, and who on the team can help with a test on the robot.
+
+### /cmd_vel node
+
+`src/cmd_vel_node.py` listens on `/go2/command` and publishes `geometry_msgs/Twist` on `/cmd_vel` at 20 Hz. A Twist carries speeds, not distances, so a distance is converted to a duration: 0.3 m/s for moves and 0.5 rad/s for turns, then zero. Both speeds are cautious first values to be agreed with the lab.
+
+The full chain is now: text on `/voice_command` -> language model -> safety check -> `/go2/command` -> `/cmd_vel`.
+
+### Test of the full chain (ROS 2 Humble container, Llama 3.2 3B)
+
+| Command | Model and check | Measured on /cmd_vel |
+|---|---|---|
+| Walk forward one metre. | approved, 0.71 s | +0.30 m/s for 3.30 s (0.99 m), then zero |
+| Turn right 90 degrees. | approved, 0.71 s | -0.50 rad/s for 3.10 s (88.9 degrees), then zero |
+| Go backwards three metres. | approved, 0.71 s | -0.30 m/s, cut short by the stop below |
+| Stop! | approved, 0.73 s | zero sent at once; the 3 m move ended after 0.82 m |
+| Sit. | approved, 0.72 s | nothing sent; reported as unsupported |
+| Walk forward 50 metres. | blocked by the 5 m limit | nothing sent |
+
+The distances and angles are the commanded speed multiplied by the time it was sent. They are not measurements of a robot.
+
+### Limits
+
+- Movement is timed, not measured. On the real robot the distance will be off by whatever the robot's acceleration and slipping add. Using the robot's position feedback would fix this.
+- Posture commands (stand up, sit, lie down) cannot be sent on `/cmd_vel`. They need a different interface on the Go2, still to be identified with the lab.
+- Tested on Humble only. The robot runs Jazzy.
+- A spoken "stop" takes about 0.7 s to pass through the model before the zero is sent.
+- Nothing here has been run on the robot or the Jetson.

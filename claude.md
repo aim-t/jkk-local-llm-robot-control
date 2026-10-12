@@ -5,7 +5,7 @@
 
 ## Context
 - Internship: JKK, Széchenyi István University, lasting one semester.
-- Robot: Unitree Go2 with ROS 2. Onboard computer not yet confirmed.
+- Robot: Unitree Go2 Edu with an NVIDIA Jetson Orin Nano (memory size not yet confirmed). The robot runs ROS 2 Jazzy; the lab uses Humble and Jazzy. Movement is commanded with Twist messages on `/cmd_vel`. Confirmed by the mentor on 12 Oct 2026.
 - Development machine: MacBook Pro, Apple M4, 16 GB unified memory. No NVIDIA GPU, no CUDA.
 - The user is a beginner in Python and LLM deployment: explain each step in plain language.
 

@@ -10,7 +10,9 @@ It is an internship project at the Vehicle Industry Research Center (JKK), Széc
 
 ## Current status
 
-One model runs locally, is measured by a repeatable benchmark, and is connected to ROS 2 through a safety check. It has not yet been run on the robot or connected to the Go2's movement interface.
+One model runs locally, is measured by a repeatable benchmark, and is connected to ROS 2: a plain-text command becomes checked velocity messages on `/cmd_vel`. It has been tested in a container only, not yet on the robot.
+
+The target robot is a Unitree Go2 Edu with an NVIDIA Jetson Orin Nano, running ROS 2 Jazzy.
 
 | Measure | Result |
 |---|---|
@@ -128,6 +130,14 @@ docker exec go2_llm bash -c 'source /opt/ros/humble/setup.bash && \
 
 The first terminal prints whether the command was approved or blocked. Press Ctrl+C there to stop the node.
 
+A second node, `src/cmd_vel_node.py`, turns approved commands into `geometry_msgs/Twist` messages on `/cmd_vel`, the topic the lab uses to move the robot. Start it in the same container:
+
+```bash
+docker exec -it go2_llm bash -c 'source /opt/ros/humble/setup.bash && python3 /ws/src/cmd_vel_node.py'
+```
+
+It sends 0.3 m/s for moves and 0.5 rad/s for turns, for as long as the distance or angle needs, then zero. `stop` sends zero at once. `stand_up`, `sit` and `lie_down` cannot be expressed as a velocity, so they are reported on `/go2/command_unsupported` and nothing is sent.
+
 ## Test commands
 
 Each line of [data/go2_commands.jsonl](data/go2_commands.jsonl) is one command with its expected answer:
@@ -161,8 +171,8 @@ The two larger files label each command with a category (`move`, `turn`, `postur
 
 ## Next steps
 
-1. Confirm which computer the Go2 carries and how much memory it has.
-2. Turn approved commands into the Go2's own movement messages.
+1. Confirm the Jetson Orin Nano's memory size and software version.
+2. Test the nodes on ROS 2 Jazzy and then on the robot, with the lab team.
 3. Compare permissively licensed models and quantization levels with the same benchmark.
 4. Run the model on the robot's computer.
 5. Fine-tune the best model.
