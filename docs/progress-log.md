@@ -278,3 +278,18 @@ The distances and angles are the commanded speed multiplied by the time it was s
 - Tested on Humble only. The robot runs Jazzy.
 - A spoken "stop" takes about 0.7 s to pass through the model before the zero is sent.
 - Nothing here has been run on the robot or the Jetson.
+
+## 12 October 2026: full chain repeated on ROS 2 Jazzy
+
+The robot runs Jazzy, so the same six-command test was repeated in the `ros:jazzy-ros-base` image (ROS 2 Jazzy, Python 3.12.3). No code changes were needed.
+
+| Command | Model and check | Measured on /cmd_vel |
+|---|---|---|
+| Walk forward one metre. | approved, 0.70 s | +0.30 m/s for 3.30 s (0.99 m), then zero |
+| Turn right 90 degrees. | approved, 0.73 s | -0.50 rad/s for 3.15 s (90.3 degrees), then zero |
+| Go backwards three metres. | approved, 0.75 s | -0.30 m/s, cut short by the stop below |
+| Stop! | approved, 0.73 s | zero sent at once; the 3 m move ended after 0.71 m |
+| Sit. | approved, 0.77 s | nothing sent; reported as unsupported |
+| Walk forward 50 metres. | blocked by the 5 m limit | nothing sent |
+
+The results match the Humble run. The README now uses the Jazzy image, and the Humble image was removed from the development machine.

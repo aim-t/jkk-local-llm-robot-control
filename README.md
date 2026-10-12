@@ -10,7 +10,7 @@ It is an internship project at the Vehicle Industry Research Center (JKK), Széc
 
 ## Current status
 
-One model runs locally, is measured by a repeatable benchmark, and is connected to ROS 2: a plain-text command becomes checked velocity messages on `/cmd_vel`. It has been tested in a container only, not yet on the robot.
+One model runs locally, is measured by a repeatable benchmark, and is connected to ROS 2: a plain-text command becomes checked velocity messages on `/cmd_vel`. It has been tested in ROS 2 Humble and Jazzy containers only, not yet on the robot.
 
 The target robot is a Unitree Go2 Edu with an NVIDIA Jetson Orin Nano, running ROS 2 Jazzy.
 
@@ -107,10 +107,10 @@ To stop Ollama, press Ctrl+C in the terminal running `ollama serve`.
 
 The node listens for text on `/voice_command`, asks the model, applies the safety check, and publishes approved commands on `/go2/command` and refused ones on `/go2/command_blocked`. It does not move a robot.
 
-It runs in the official ROS 2 Humble container, so it needs Docker Desktop running as well as `ollama serve`. Download the image once (260 MB):
+It runs in the official ROS 2 Jazzy container, the same ROS 2 version as the robot, so it needs Docker Desktop running as well as `ollama serve`. Download the image once (287 MB):
 
 ```bash
-docker pull ros:humble-ros-base
+docker pull ros:jazzy-ros-base
 ```
 
 Start the node from the project folder:
@@ -118,13 +118,13 @@ Start the node from the project folder:
 ```bash
 docker run --rm -it --name go2_llm -v "$PWD":/ws:ro \
   -e OLLAMA_URL=http://host.docker.internal:11434 \
-  ros:humble-ros-base python3 /ws/src/go2_command_node.py
+  ros:jazzy-ros-base python3 /ws/src/go2_command_node.py
 ```
 
 In a second terminal, send it a command:
 
 ```bash
-docker exec go2_llm bash -c 'source /opt/ros/humble/setup.bash && \
+docker exec go2_llm bash -c 'source /opt/ros/jazzy/setup.bash && \
   ros2 topic pub --once /voice_command std_msgs/msg/String "{data: \"Turn left 90 degrees.\"}"'
 ```
 
@@ -133,7 +133,7 @@ The first terminal prints whether the command was approved or blocked. Press Ctr
 A second node, `src/cmd_vel_node.py`, turns approved commands into `geometry_msgs/Twist` messages on `/cmd_vel`, the topic the lab uses to move the robot. Start it in the same container:
 
 ```bash
-docker exec -it go2_llm bash -c 'source /opt/ros/humble/setup.bash && python3 /ws/src/cmd_vel_node.py'
+docker exec -it go2_llm bash -c 'source /opt/ros/jazzy/setup.bash && python3 /ws/src/cmd_vel_node.py'
 ```
 
 It sends 0.3 m/s for moves and 0.5 rad/s for turns, for as long as the distance or angle needs, then zero. `stop` sends zero at once. `stand_up`, `sit` and `lie_down` cannot be expressed as a velocity, so they are reported on `/go2/command_unsupported` and nothing is sent.
@@ -172,7 +172,7 @@ The two larger files label each command with a category (`move`, `turn`, `postur
 ## Next steps
 
 1. Confirm the Jetson Orin Nano's memory size and software version.
-2. Test the nodes on ROS 2 Jazzy and then on the robot, with the lab team.
+2. Test the nodes on the robot, with the lab team.
 3. Compare permissively licensed models and quantization levels with the same benchmark.
 4. Run the model on the robot's computer.
 5. Fine-tune the best model.
