@@ -293,3 +293,69 @@ The robot runs Jazzy, so the same six-command test was repeated in the `ros:jazz
 | Walk forward 50 metres. | blocked by the 5 m limit | nothing sent |
 
 The results match the Humble run. The README now uses the Jazzy image, and the Humble image was removed from the development machine.
+
+## 26 October 2026: mentor's answers, speed parameters and /odom
+
+### Confirmed by the mentor
+
+- The Jetson Orin Nano has 8 GB of memory. JetPack version to be checked in the lab's robot documentation.
+- Software may be installed on the Jetson after agreeing what it is.
+- Sit, stand up and lie down are done through Unitree's Python API.
+- The robot publishes `/odom`, described as accurate.
+- Start at 0.6 m/s and raise gradually if needed. The maximum speed must be an easy-to-change parameter.
+- There is no physical emergency stop button; the robot is stopped through the API.
+- MuJoCo or Isaac Sim can be used before the real robot.
+- First robot tests with the mentor and Balázs Szőnyi; time slots to be proposed.
+
+### Changes to `src/cmd_vel_node.py`
+
+- Speeds are ROS parameters: `max_linear_speed` (default 0.6 m/s) and `max_angular_speed` (default 0.5 rad/s). They can be changed at start-up or while the node runs.
+- The node stops when `/odom` shows the distance or angle has been covered, instead of after a fixed time. Speed is reduced near the target to limit overshoot.
+- If `/odom` is missing when a command arrives, the movement is refused. If it stops arriving during a movement, the robot is stopped. A time limit (twice the expected time plus 2 s) stops a movement that never reaches its target.
+- `use_odom:=false` keeps the old timed behaviour.
+
+`src/fake_go2_node.py` was added to test without the robot: it turns `/cmd_vel` into a position on `/odom`, with a 0.3 s lag so speed changes are not instant. It is a rough stand-in, not a model of the Go2.
+
+### Test against the stand-in robot (ROS 2 Jazzy container)
+
+| Case | Result |
+|---|---|
+| Move 1.0 m at 0.6 m/s, measured with `/odom` | moved 1.04 m |
+| Turn right 90 degrees, measured | turned 93.0 degrees |
+| Move back 2.0 m, measured | moved 2.03 m |
+| Move 1.0 m, timed | moved 0.98 m |
+| Turn right 90 degrees, timed | turned 90.0 degrees |
+| Speed set to 0.3 m/s while running, then move 1.0 m | top speed 0.30 m/s, moved 1.03 m |
+| Move 4.0 m, stop sent after 1.5 s | moved 0.90 m |
+| Move 1.0 m with no `/odom` | refused, no speed sent |
+
+### Findings
+
+- The parameters, the stop, and the refusal without `/odom` work as intended.
+- With `/odom`, the stand-in robot overshot by 3 to 4 percent, because it keeps moving briefly after the zero is sent.
+- Timing looked slightly more accurate here, but only because the stand-in's lag is perfectly predictable. It cannot show the advantage of `/odom` on a real robot, which slips and varies. That comparison needs the simulator or the robot.
+
+### Still open
+
+- The link to the lab's "Unitree Go2 Stacks" robot documentation, which was lost when the mentor's message was copied.
+- Using the Unitree Python API for posture commands and for the emergency stop.
+
+## 26 October 2026: test helper and robot test guide
+
+- `src/send.py` sends one command from a terminal (`text`, `move`, `turn` or `stop`). Typed moves and turns pass through the safety check; `move 30` was refused. `stop` also sends zero speed directly on `/cmd_vel`.
+- Against the stand-in robot: `move 0.5` measured 0.53 m, `turn -90` measured 90.2 degrees, `stop` ended a 3 m move.
+- Dry-run check: with `cmd_vel_node.py` remapped to `/cmd_vel_dry_run`, 106 speed messages went to the test topic and none to `/cmd_vel`. With the robot not moving, the time limit ended the movement.
+- `docs/robot-test-guide.md` describes how the system was built and the steps for the first test on the robot.
+
+## 26 October 2026: the lab's Go2 repository
+
+The mentor's documentation link is https://github.com/jkk-research/JKK_UNITREE_GO2. From its README:
+
+- Jetson Orin Nano (Super) flashed to JetPack 6.2.1. The robot ships with 5.1.1, and the update cannot be undone.
+- ROS 2 Humble installed directly on the robot, with workspaces in `/home/unitree` loaded from `~/.bashrc`. This differs from the mentor's message that the dog uses Jazzy; to be confirmed. The project code has been tested on both.
+- Network: the robot's computer is at `192.168.123.18`. A PC joins with a fixed address such as `192.168.123.200/24`. ROS 2 uses CycloneDDS, with no `ROS_DOMAIN_ID`.
+- Included drivers: `go2_ros2_sdk`, `go2_robot`, `unitree_ros2`, plus SLAM and autonomy stacks. Which one provides `/cmd_vel` and `/odom` during tests is not stated.
+- `go2_robot` documents a `/mode` service with modes including `sit`, `stand_up`, `stand_down`, `stop_move` and `damp`, a possible route for posture commands and stopping.
+- No simulator setup is described.
+
+`docs/robot-test-guide.md` now uses these addresses and steps.

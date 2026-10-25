@@ -12,7 +12,7 @@ It is an internship project at the Vehicle Industry Research Center (JKK), Széc
 
 One model runs locally, is measured by a repeatable benchmark, and is connected to ROS 2: a plain-text command becomes checked velocity messages on `/cmd_vel`. It has been tested in ROS 2 Humble and Jazzy containers only, not yet on the robot.
 
-The target robot is a Unitree Go2 Edu with an NVIDIA Jetson Orin Nano, running ROS 2 Jazzy.
+The target robot is a Unitree Go2 Edu with an NVIDIA Jetson Orin Nano (8 GB), running ROS 2 Jazzy.
 
 | Measure | Result |
 |---|---|
@@ -136,7 +136,22 @@ A second node, `src/cmd_vel_node.py`, turns approved commands into `geometry_msg
 docker exec -it go2_llm bash -c 'source /opt/ros/jazzy/setup.bash && python3 /ws/src/cmd_vel_node.py'
 ```
 
-It sends 0.3 m/s for moves and 0.5 rad/s for turns, for as long as the distance or angle needs, then zero. `stop` sends zero at once. `stand_up`, `sit` and `lie_down` cannot be expressed as a velocity, so they are reported on `/go2/command_unsupported` and nothing is sent.
+It moves at `max_linear_speed` (default 0.6 m/s, the lab's suggested starting value) and turns at `max_angular_speed` (default 0.5 rad/s). It watches the robot's position on `/odom` and stops once the distance or angle has actually been covered, slowing down near the end. If `/odom` is missing or stops arriving, it refuses to move or stops. `stop` sends zero at once. `stand_up`, `sit` and `lie_down` cannot be expressed as a velocity, so they are reported on `/go2/command_unsupported` and nothing is sent.
+
+Change the speeds when starting the node, or while it runs:
+
+```bash
+python3 /ws/src/cmd_vel_node.py --ros-args -p max_linear_speed:=0.6 -p max_angular_speed:=0.5
+ros2 param set /cmd_vel_node max_linear_speed 0.8
+```
+
+Set `use_odom:=false` to fall back to timing (speed multiplied by time) when no position report is available.
+
+`src/send.py` sends one command without typing ROS message syntax: `python3 send.py text "Turn left 90 degrees."`, `move 0.5`, `turn -90` or `stop`. Typed moves and turns go through the same safety check as the model's answers.
+
+The [robot test guide](docs/robot-test-guide.md) walks through the first test on the Go2 step by step.
+
+To test without the robot, `src/fake_go2_node.py` stands in for it: it listens to `/cmd_vel` and publishes the resulting position on `/odom`. It is a rough stand-in, not a model of the Go2.
 
 ## Test commands
 
@@ -171,11 +186,12 @@ The two larger files label each command with a category (`move`, `turn`, `postur
 
 ## Next steps
 
-1. Confirm the Jetson Orin Nano's memory size and software version.
-2. Test the nodes on the robot, with the lab team.
-3. Compare permissively licensed models and quantization levels with the same benchmark.
-4. Run the model on the robot's computer.
-5. Fine-tune the best model.
+1. Confirm the Jetson's JetPack version and agree with the lab what to install on it.
+2. Add sit, stand up, lie down and emergency stop through the Unitree Python API.
+3. Test in the MuJoCo simulator, then on the robot with the lab team.
+4. Compare permissively licensed models and quantization levels with the same benchmark.
+5. Run the model on the robot's computer.
+6. Fine-tune the best model.
 
 ## Contributing
 

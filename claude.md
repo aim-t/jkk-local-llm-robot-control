@@ -5,7 +5,12 @@
 
 ## Context
 - Internship: JKK, Széchenyi István University, lasting one semester.
-- Robot: Unitree Go2 Edu with an NVIDIA Jetson Orin Nano (memory size not yet confirmed). The robot runs ROS 2 Jazzy; the lab uses Humble and Jazzy. Movement is commanded with Twist messages on `/cmd_vel`. Confirmed by the mentor on 12 Oct 2026.
+- Robot: Unitree Go2 Edu with an NVIDIA Jetson Orin Nano, 8 GB. The lab's setup guide is https://github.com/jkk-research/JKK_UNITREE_GO2: JetPack 6.2.1 (shipped with 5.1.1; no downgrade possible), ROS 2 Humble installed natively, CycloneDDS, robot computer at 192.168.123.18. The mentor said the dog uses Jazzy; which is current is not yet confirmed.
+- Robot drivers in the lab repo: go2_ros2_sdk, go2_robot (has a /mode service with sit, stand_up, stand_down, stop_move, damp), unitree_ros2.
+- Movement: Twist messages on `/cmd_vel`. Sit, stand up and lie down go through Unitree's Python API. The robot publishes an accurate `/odom`.
+- Safety: start at 0.6 m/s and raise gradually; the maximum speed must stay an easy-to-change parameter. There is no physical emergency stop button; the robot is stopped through the API.
+- Software may be installed on the Jetson after agreeing with the mentor what it is.
+- Simulators available: MuJoCo or Isaac Sim. First robot tests with the mentor and Balázs Szőnyi.
 - Development machine: MacBook Pro, Apple M4, 16 GB unified memory. No NVIDIA GPU, no CUDA.
 - The user is a beginner in Python and LLM deployment: explain each step in plain language.
 
