@@ -10,6 +10,7 @@ Replay saved benchmark results to see what the check would have blocked:
 
 import json
 import math
+import re
 import sys
 
 from run_benchmark import ACTIONS, is_correct, signed_angle
@@ -69,6 +70,48 @@ def check(reply):
         "distance_m": distance,
         "angle_deg": signed_angle(got) if action == "turn" else 0.0,
     }
+    return command, "ok"
+
+
+# How many metres one unit is. Checked against the typed command, not the model's reply.
+UNIT_METRES = {
+    "km": 1000.0, "kilometre": 1000.0, "kilometres": 1000.0, "kilometer": 1000.0, "kilometers": 1000.0,
+    "kilométer": 1000.0, "kilométert": 1000.0,
+    "mile": 1609.344, "miles": 1609.344,
+    "m": 1.0, "metre": 1.0, "metres": 1.0, "meter": 1.0, "meters": 1.0, "méter": 1.0, "métert": 1.0,
+    "cm": 0.01, "centimetre": 0.01, "centimetres": 0.01, "centimeter": 0.01, "centimeters": 0.01,
+    "mm": 0.001, "millimetre": 0.001, "millimetres": 0.001, "millimeter": 0.001, "millimeters": 0.001,
+    "ft": 0.3048, "foot": 0.3048, "feet": 0.3048,
+}
+LONG_UNITS = {name for name, metres in UNIT_METRES.items() if metres >= 1000}
+_UNIT_PATTERN = "|".join(sorted(map(re.escape, UNIT_METRES), key=len, reverse=True))
+_DISTANCE_IN_TEXT = re.compile(rf"(\d+(?:[.,]\d+)?)\s*({_UNIT_PATTERN})\b", re.IGNORECASE)
+_LONG_UNIT_IN_TEXT = re.compile(rf"\b({'|'.join(map(re.escape, LONG_UNITS))})\b", re.IGNORECASE)
+
+
+def check_against_text(text, command):
+    """Second check: does the model's distance match the numbers and units the person typed?
+
+    The model has been seen to read "2 km" as 2 m. This compares the approved command with
+    the typed text, so a unit mistake is refused instead of sent to the robot.
+    Returns (command, reason); command is None when the two disagree.
+    """
+    if command is None or command["action"] != "move":
+        return command, "ok"
+    found = [(float(number.replace(",", ".")), unit.lower()) for number, unit in _DISTANCE_IN_TEXT.findall(text)]
+    if len(found) == 1:
+        value, unit = found[0]
+        expected = value * UNIT_METRES[unit]
+        model = abs(command["distance_m"])
+        if abs(model - expected) > max(0.05, 0.10 * expected):
+            return None, (f"the command says {value:g} {unit} (= {expected:g} m) but the model gave "
+                          f"{model:g} m; refused so a unit mistake cannot move the robot")
+        if expected > MAX_DISTANCE_M:
+            return None, f"{value:g} {unit} is {expected:g} m, over the {MAX_DISTANCE_M:g} m limit"
+    elif not found and _LONG_UNIT_IN_TEXT.search(text):
+        # e.g. "two kilometres": the number is a word, but any whole kilometre or mile is too far.
+        unit = _LONG_UNIT_IN_TEXT.search(text).group(1)
+        return None, f"the command is in {unit}, which is far over the {MAX_DISTANCE_M:g} m limit"
     return command, "ok"
 
 

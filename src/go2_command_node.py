@@ -22,7 +22,7 @@ from rclpy.node import Node
 from std_msgs.msg import String
 
 from run_benchmark import ask
-from safety import check
+from safety import check, check_against_text
 
 
 class Go2CommandNode(Node):
@@ -48,6 +48,7 @@ class Go2CommandNode(Node):
             self.get_logger().error(f"model not reachable: {error}")
             return
         command, reason = check(reply)
+        command, reason = check_against_text(text, command) if command else (command, reason)
         elapsed = time.perf_counter() - start
 
         if command is None:

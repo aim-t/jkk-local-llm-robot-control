@@ -359,3 +359,19 @@ The mentor's documentation link is https://github.com/jkk-research/JKK_UNITREE_G
 - No simulator setup is described.
 
 `docs/robot-test-guide.md` now uses these addresses and steps.
+
+## 28 October 2026: kilometre mistake and a unit check in code
+
+Typing "2 km" in the web console produced a 2 m move: the model read kilometres as metres. Two fixes:
+
+- The prompt now says: convert every distance to metres, 1 km = 1000 m, and "km" means kilometres, never metres.
+- `check_against_text()` in `src/safety.py` compares an approved move with the numbers and units in the typed text (km, m, cm, mm, miles, feet, and the Hungarian méter and kilométer). If they disagree by more than 5 cm or 10 %, or the typed distance is over the 5 m limit, the move is refused. A kilometre or mile written in words ("two kilometres") is always refused. `go2_command_node.py` runs it after the existing check.
+
+With the new prompt, the model converted 2 km, 1 km, 0.5 km, "two kilometres" and "3 km back" correctly; all were refused by the 5 m limit. "1 mile" became 1000 m, still wrong but refused.
+
+| Set | Before | After | Result file |
+|---|---|---|---|
+| Tuning set (40) | 40 | 38 | `results/20261028-002617_llama3.2-3b.json` |
+| Held-out set (60) | 57 | 58 | `results/20261028-002843_llama3.2-3b.json` |
+
+New errors on the tuning set: "Go forward 1500 millimetres" became 15 m (refused by the 5 m limit) and "Fetch the ball" was no longer refused by the model. Median time per command was 0.78 s, against 0.65 s before; the Ollama server was already running with settings this test did not control, so the timing is not comparable.
