@@ -500,3 +500,13 @@ Fixed on the way: the page sends a stop three times in case UDP drops one, which
 - `urg_node`: the Hokuyo lidar at 192.168.0.10 could not be reached. Not needed for driving with commands.
 - The lab's bringup also starts `controller_receiver` (a virtual controller listening on port 5005) and its own `teleop_joy`, which logged "Unsubscribed from /drive topic". How autonomous `/drive` commands are enabled on this car is still to be confirmed with the mentor.
 - `ros2 node list` over ssh found no nodes although they were running, probably a stale ros2 daemon. `check.sh`, `diagnose.sh` and `run_on_robot.sh` now run `ros2 daemon stop` first.
+
+## 30 October 2026: car2's driver running
+
+With Claude Code running in the Terminal app (VS Code still lacks the macOS Local Network permission):
+
+- `bringup_launch.py` accepts `vesc_config:=`. Started it with a copy of `vesc.yaml` whose port is `/dev/ttyACM0`: "Connected to VESC with firmware version 6.5". `/sensors/core` at 50 Hz. The lab's file is unchanged.
+- `/odom` stayed silent until the first steering command: `vesc_to_odom` uses the servo command (`use_servo_cmd_to_calc_angular_velocity: true`). One second of zero-speed, straight-ahead `/drive` started it at 50 Hz; the motor speed command stayed 0. `run_on_robot.sh` now does this automatically.
+- Command path: `/drive` -> `ackermann_mux` -> `/ackermann_cmd` -> `ackermann_to_vesc_node` -> VESC.
+- The lab's `teleop_joy.cpp` (not the standard joy_teleop): with a controller, button 4 held lets `/drive` through; otherwise it publishes the sticks to `teleop` and directly to `ackermann_cmd`. Button 3 "kill switch" runs `pkill '/opt/ros/foxy'`, which does nothing on Humble. With no controller connected (no `/joy`), `/drive` reaches the motors with no dead-man switch.
+- Added `robot/driver.sh start|stop|status|log` to run the driver from the Mac with the corrected port.

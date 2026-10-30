@@ -27,6 +27,13 @@ trap 'exit 1' HUP INT TERM   # a dropped ssh connection still runs cleanup and s
 
 echo "ROS 2 channel: ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}, ${RMW_IMPLEMENTATION:-default middleware}"
 # Before anything can move: the robot must report its position, and something must listen.
+if [ -n "$DRIVE_TOPIC" ] && ! timeout 5 ros2 topic echo --once "$ODOM_TOPIC" >/dev/null 2>&1; then
+    # F1TENTH: vesc_to_odom only starts publishing after its first steering command. A zero-speed,
+    # straight-ahead command wakes it up without moving the car.
+    echo "Waking up the position reports with a zero-speed command..."
+    timeout 3 ros2 topic pub -r 10 -t 10 "$DRIVE_TOPIC" ackermann_msgs/msg/AckermannDriveStamped \
+        "{drive: {speed: 0.0, steering_angle: 0.0}}" >/dev/null 2>&1
+fi
 if ! timeout 5 ros2 topic echo --once "$ODOM_TOPIC" >/dev/null 2>&1; then
     echo "No position reports on $ODOM_TOPIC. Start the robot's driver first (or set ODOM_TOPIC). Nothing was started."
     exit 1

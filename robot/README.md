@@ -72,26 +72,23 @@ The car's ROS 2 channel is set in its `~/.bashrc` (`ROS_DOMAIN_ID=2`, CycloneDDS
 
 ## First test with car2, step by step
 
-Read from the car's own settings (`f1tenth_stack/config`, 30 October 2026):
+What car2 actually does (read from its software on 30 October 2026):
 
-- `ackermann_mux` takes our commands on `drive` (priority 10, 0.2 s timeout) and the joystick on `teleop` (priority 100). **The joystick always wins.**
-- **Our commands only reach the motors while someone holds joystick button 5 (usually RB).** Releasing it stops the car. Without the button, the joystick's `default` mapping sends its sticks instead, and **the left stick drives at up to 2 m/s without any button**: do not touch the sticks.
-- Wheelbase 0.25 m; the steering servo allows about 0.29 rad.
+- **Driver:** `f1tenth_stack`'s `bringup_launch.py`. Its VESC settings name `/dev/ttyACM1`, but the motor controller is at `/dev/ttyACM0`, so `robot/driver.sh start` runs it with a corrected copy (`~/vesc_llm.yaml`). The lab's files are not changed.
+- **Position reports (`/odom`)** only start after the first steering command. `run_on_robot.sh` sends a one-second zero-speed command to wake them up; the car does not move.
+- **The lab's own joystick program (`teleop_joy`)** decides who drives when a controller is connected: holding **button 4** passes our `/drive` commands through ("autonomous mode"); releasing it gives control back to the sticks (centred = stop). Its kill switch (button 3) runs `pkill '/opt/ros/foxy'`, which matches nothing on this Humble car, so **it does not work**.
+- **With no controller connected, nothing overrides `/drive`:** our commands reach the motors without any button held. The only stops are then ours (STOP on the page, empty line in the chat, closing the page) and `robot/driver.sh stop`. Ask the mentor which controller pairs with `controller_receiver` (port 5005) so button 4 can be used as a dead-man switch.
 
 Steps, with the mentor present:
 
-1. **Wheels off the ground first.** Put the car on a box so the wheels spin freely. The first commands then only show that the wheels turn and steer the right way, and nothing can drive off.
-2. **Terminal app, window 1: start the car's driver.**
-   ```bash
-   ssh car2@192.168.123.95
-   ros2 launch f1tenth_stack bringup_launch.py
-   ```
-   Leave it running. If it reports it cannot open the VESC (motor controller), tell the mentor: its settings name `/dev/ttyACM1`, but the controller showed up as `/dev/ttyACM0`.
-3. **Terminal app, window 2: check.** `bash robot/check.sh` should now list `/drive` and `/odom` with a message rate.
-4. **Start the web page:** `bash robot/start_gui.sh` (speed 0.3 m/s by default). The browser opens at http://localhost:8765 and the header shows "car2 connected". Prefer the terminal? `bash robot/start.sh` instead.
-5. **Hold button 5 on the joystick**, then type (or speak) `Drive forward half a metre.` The wheels should spin forward and stop. Try `Turn left 45 degrees.` (wheels steer left and spin), then a stop with an empty line.
-6. **Only then on the floor**, in a clear area of at least 3 x 3 m, with the joystick holder ready to let go of button 5.
-7. **To stop at any time:** let go of button 5, or press STOP on the page (empty line in the terminal chat). Closing the page or losing Wi-Fi also stops the car within about 1.5 s. Finish with Ctrl+C in window 2, then Ctrl+C in window 1.
+1. **Wheels off the ground first.** Put the car on a box so the wheels spin freely.
+2. **Start the car's driver** from the Mac: `bash robot/driver.sh start`. It should print "Connected to VESC". Check with `bash robot/driver.sh status`.
+3. **Start the web page:** `bash robot/start_gui.sh` (speed 0.3 m/s by default). The header should show "car2 connected". Prefer the terminal? `bash robot/start.sh`.
+4. **If a controller is connected, hold button 4**, then type (or speak) `Drive forward half a metre.` The wheels should spin forward and stop. Try `Turn left 45 degrees.` (wheels steer left and spin), then STOP.
+5. **Only then on the floor**, in a clear area of at least 3 x 3 m.
+6. **To stop at any time:** press STOP on the page, let go of button 4 (if a controller is used), or close the page (the car stops within 1.5 s). Finish with Ctrl+C in the terminal, then `bash robot/driver.sh stop`.
+
+Run all robot scripts from the **Terminal app** unless VS Code has the macOS Local Network permission.
 
 ## Safety behaviour
 
