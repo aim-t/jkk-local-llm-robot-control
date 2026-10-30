@@ -24,6 +24,9 @@ from std_msgs.msg import String
 from run_benchmark import ask
 from safety import check, check_against_text
 
+ANSWER_TIMEOUT_S = 10.0  # give up on the model after this long
+STALE_S = 5.0            # an answer that took longer than this is not acted on
+
 
 class Go2CommandNode(Node):
     def __init__(self):
@@ -34,22 +37,25 @@ class Go2CommandNode(Node):
         self.create_subscription(String, "/voice_command", self.on_command, 10)
 
         # Load the model now so the first real command is not slow.
-        warmup = ask(self.model, "Stand up.")
+        # Load the model now so the first real command is not slow. Loading can take a while.
+        warmup = ask(self.model, "Stand up.", timeout=120)
         self.get_logger().info(f"{self.model} ready (loaded in {warmup['load_s']:.1f} s). Waiting on /voice_command")
 
     def on_command(self, message):
         text = message.data
         start = time.perf_counter()
         try:
-            reply = ask(self.model, text)["reply"]
-        except OSError as error:
-            # No answer from the model means no movement.
-            self.publish(self.blocked, {"heard": text, "reason": f"model not reachable: {error}"})
-            self.get_logger().error(f"model not reachable: {error}")
+            reply = ask(self.model, text, timeout=ANSWER_TIMEOUT_S)["reply"]
+        except Exception as error:  # network, timeout or a garbled answer: never move
+            self.publish(self.blocked, {"heard": text, "reason": f"no usable answer from the model: {error}"})
+            self.get_logger().error(f"no usable answer from the model: {error}")
             return
         command, reason = check(reply)
         command, reason = check_against_text(text, command) if command else (command, reason)
         elapsed = time.perf_counter() - start
+        if command is not None and elapsed > STALE_S:
+            # The person may have moved on (or said stop) while the model was slow.
+            command, reason = None, f"the answer took {elapsed:.1f} s, so it was not acted on"
 
         if command is None:
             self.publish(self.blocked, {"heard": text, "reason": reason, "model_reply": reply})

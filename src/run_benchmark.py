@@ -57,13 +57,13 @@ Rules:
 - Reply with the JSON object only."""
 
 
-def post(path, payload, stream=False):
+def post(path, payload, stream=False, timeout=600):
     request = urllib.request.Request(
         OLLAMA_URL + path,
         data=json.dumps(payload).encode(),
         headers={"Content-Type": "application/json"},
     )
-    response = urllib.request.urlopen(request, timeout=600)
+    response = urllib.request.urlopen(request, timeout=timeout)
     return response if stream else json.loads(response.read())
 
 
@@ -71,7 +71,7 @@ def get(path):
     return json.loads(urllib.request.urlopen(OLLAMA_URL + path, timeout=30).read())
 
 
-def ask(model, command):
+def ask(model, command, timeout=600):
     """Send one command and return the reply text plus timing numbers."""
     payload = {
         "model": model,
@@ -88,7 +88,7 @@ def ask(model, command):
     first_token_s = None
     text = ""
     final = {}
-    for line in post("/api/chat", payload, stream=True):
+    for line in post("/api/chat", payload, stream=True, timeout=timeout):
         chunk = json.loads(line)
         piece = chunk.get("message", {}).get("content", "")
         if piece and first_token_s is None:

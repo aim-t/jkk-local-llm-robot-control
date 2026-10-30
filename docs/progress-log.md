@@ -404,3 +404,36 @@ Recognition added 0.08 to 0.13 s per command; the language model took 0.77 to 0.
 
 - Tested with a synthetic voice, not a real microphone, accents or a noisy lab. Real speech may be misheard more often, especially numbers.
 - The microphone part of the page could not be tested here; it needs a browser and a person speaking.
+
+## 30 October 2026: connecting to the lab's race car, with a safety review
+
+Branch `feature/racer-car`. The first real robot is the lab's race car (`car2`); the Go2 comes later. Credentials are in `.env.local`, which git ignores; the scripts in `robot/` read it on the Mac only and pass the password to ssh without printing or copying it.
+
+- `cmd_vel_node.py` has a car mode (`vehicle_type:=car`): a turn drives forward on a circle of `turn_radius` until `/odom` shows the angle, since a car cannot turn on the spot. Against the stand-in robot: 90 degree turns measured 90.2 to 90.5 degrees; legged mode unchanged.
+- `robot/check.sh` logs in read-only; `robot/start.sh` copies seven files to `~/llm_commands` on the robot and opens the chat there. The language model stays on the Mac.
+
+### Safety and code review before first use on the car
+
+Problems found and fixed:
+
+| Problem | Fix |
+|---|---|
+| `cmd_vel_node.py` trusted anything on `/go2/command`; a malformed message would crash it | It re-checks every command (limits, finite numbers) and sends zero speed instead of crashing |
+| Speed parameters could be set to any value, also while running | Hard limits: 1.5 m/s, 2.0 rad/s, turn radius at least 0.3 m |
+| On shutdown the final zero speed failed to send (ROS had already shut down) | The node handles Ctrl+C, SIGTERM and SIGHUP itself and sends zero before shutting down |
+| A dropped ssh connection killed the node without a zero speed | SIGHUP handled the same way; the robot-side script also stops on hang-up |
+| The language node waited up to 600 s for the model; queued commands could run much later | 10 s timeout; answers that took over 5 s are not acted on; any model error refuses the command |
+| `start.sh` passed settings unchecked into a command run on the robot | Values are validated (numbers, limits, topic names) before connecting |
+| The robot script could start without the robot's driver running | It checks for `/odom` messages and a listener on `/cmd_vel` first |
+
+All fixes were tested with the stand-in robot. The full typed chain still works (1.00 m move, 90.2 degree car turn, stop, 2 km refused).
+
+### First contact with the car
+
+The Mac joined the car's network (192.168.123.62). The car at 192.168.123.95 did not answer at network level (no ping, no ssh, ARP incomplete), so it was likely switched off or not connected. Nothing was copied or installed on it.
+
+### Still open
+
+- Confirm the car's driver uses Twist on `/cmd_vel` and publishes `/odom`.
+- The car's minimum turning radius and a safe test speed, to agree with the lab.
+- The password is stored in plain text in `.env.local`; an ssh key would be safer.

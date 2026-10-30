@@ -1,10 +1,10 @@
-"""Type commands for the dog in plain language, one after another.
+"""Type commands for the robot in plain language, one after another.
 
     python3 chat.py
 
 Each line you type is sent on /voice_command. The answer from go2_command_node.py is shown:
 what was approved and sent on to the dog, or why it was refused. Type "stop" (or just press
-Enter on an empty line) to stop the dog at once without waiting for the language model.
+Enter on an empty line) to stop the robot at once without waiting for the language model.
 Type "quit" to leave.
 """
 
@@ -55,7 +55,7 @@ def main():
     spinner.start()
     time.sleep(1.0)  # let ROS connect
 
-    print("Type a command for the dog. Empty line or 'stop' = stop now, 'quit' = leave.")
+    print("Type a command for the robot. Empty line or 'stop' = stop now, 'quit' = leave.")
     while True:
         try:
             line = input("you> ").strip()
@@ -66,7 +66,7 @@ def main():
             for _ in range(10):
                 cmd_vel_pub.publish(Twist())
                 time.sleep(0.02)
-            print("dog> stopping")
+            print("robot> stopping")
             continue
         if line.lower() == "quit":
             break
@@ -76,14 +76,14 @@ def main():
         started = time.monotonic()
         text_pub.publish(String(data=line))
         if not got_reply.wait(REPLY_WAIT_S):
-            print("dog> no answer. Is go2_command_node.py running, and ollama serve on the Mac?")
+            print("robot> no answer. Is go2_command_node.py running, and ollama serve on the Mac?")
             continue
         kind, payload = replies[0]
         took = time.monotonic() - started
         if kind == "approved":
-            print(f"dog> {describe(payload)}  ({took:.1f} s)")
+            print(f"robot> {describe(payload)}  ({took:.1f} s)")
         else:
-            print(f"dog> refused: {payload.get('reason', 'unknown reason')}  ({took:.1f} s)")
+            print(f"robot> refused: {payload.get('reason', 'unknown reason')}  ({took:.1f} s)")
 
     executor.shutdown()
     spinner.join(timeout=2.0)
