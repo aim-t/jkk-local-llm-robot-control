@@ -8,14 +8,20 @@ last one, so only outgoing connections are needed from the Mac:
     robot -> Mac:  {"type": "state", ...}         position from /odom and the current speed command
                    {"type": "event", ...}         what go2_command_node.py approved or refused
 
-Safety: if the page goes silent for LINK_TIMEOUT_S (laptop closed, Wi-Fi lost) while the
-robot is being commanded to move, this node sends a stop.
+Every message from the Mac must carry the session key in BRIDGE_TOKEN, which start.sh makes
+fresh for each run. Messages without it are ignored, so other machines on the network cannot
+command the robot. (UDP is not encrypted: someone listening on the same network could still
+read the key. It stops casual or accidental use, not a determined attacker.)
+
+Safety: if the page goes silent for LINK_TIMEOUT_S (laptop closed, Wi-Fi lost), this node
+sends a stop, which also cancels what the language model is still working on.
 
 Started by run_on_robot.sh when GUI=1.
 """
 
+import hmac
 import json
-import math
+import os
 import signal
 import socket
 import time
@@ -27,19 +33,20 @@ from rclpy.node import Node
 from rclpy.signals import SignalHandlerOptions
 from std_msgs.msg import Empty, String
 
+from cmd_vel_node import yaw_from_quaternion
+
 PORT = 9871
 RATE_HZ = 20
 LINK_TIMEOUT_S = 1.5
 STOP_COMMAND = json.dumps({"action": "stop", "distance_m": 0.0, "angle_deg": 0.0})
 
 
-def yaw_from_quaternion(q):
-    return math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
-
-
 class RobotBridge(Node):
     def __init__(self):
         super().__init__("robot_bridge")
+        self.token = os.environ.get("BRIDGE_TOKEN", "")
+        if len(self.token) < 16:
+            raise ValueError("BRIDGE_TOKEN (the session key from start.sh) is missing or too short")
         self.voice = self.create_publisher(String, "/voice_command", 10)
         self.command_pub = self.create_publisher(String, "/go2/command", 10)
         self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
@@ -86,7 +93,12 @@ class RobotBridge(Node):
 
     def forward_event(self, kind):
         def callback(message):
-            self.send({"type": "event", "kind": kind, "data": json.loads(message.data)})
+            try:
+                data = json.loads(message.data)
+            except ValueError:
+                return  # not ours or garbled; never let it end the session
+            if isinstance(data, dict):
+                self.send({"type": "event", "kind": kind, "data": data})
         return callback
 
     def on_tick(self):
@@ -100,6 +112,8 @@ class RobotBridge(Node):
                 message = json.loads(packet)
             except ValueError:
                 continue
+            if not isinstance(message, dict) or not hmac.compare_digest(str(message.get("token", "")), self.token):
+                continue  # not from our page
             if sender != self.client:
                 self.get_logger().info(f"web page connected from {sender[0]}")
             self.client, self.client_seen = sender, now
@@ -109,9 +123,9 @@ class RobotBridge(Node):
                 self.stop("stop from the web page")
 
         if self.client and now - self.client_seen > LINK_TIMEOUT_S:
-            moving = abs(self.commanded[0]) > 1e-3 or abs(self.commanded[1]) > 1e-3
-            if moving:
-                self.stop("the web page went silent")
+            # Always stop: a command may still be with the language model even if the robot is
+            # standing still right now, and nobody is watching the page any more.
+            self.stop("the web page went silent")
             self.get_logger().info("web page disconnected")
             self.client = None
 

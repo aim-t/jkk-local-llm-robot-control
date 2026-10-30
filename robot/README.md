@@ -47,7 +47,7 @@ The language model stays on the Mac; the two ROS 2 nodes and the chat run on the
 
 `bash robot/start_gui.sh` does everything `start.sh` does, then starts `robot_bridge_node.py` on the robot instead of the terminal chat, and opens the same web page as the simulation (`robot_gui.py`, which needs the `sim_mujoco` folder and its Python). Type or speak commands there. The page shows the robot's position and path from `/odom`, its speed against the commanded speed, and for each command what the model understood, the target, what was achieved and whether it worked. There is no camera view.
 
-The Mac only sends to the robot (UDP port 9871); the robot answers. If the page stops sending for 1.5 s while the robot is moving, the bridge on the robot sends a stop.
+The Mac only sends to the robot (UDP port 9871); the robot answers. Each start makes a fresh random session key; the bridge ignores messages without it, so other machines on the network cannot command the robot. UDP is not encrypted, so someone listening on the same network could still read the key: it stops casual or accidental use, not a determined attacker. If the page stops sending for 1.5 s, the bridge sends a stop and cancels what the language model is working on.
 
 ## Settings
 
@@ -100,7 +100,8 @@ Checked on 30 October 2026 with a stand-in robot in Docker:
 | Empty line or "stop" in the chat | Stop sent directly, without the language model |
 | Command over 5 m or 180 degrees, unreadable, or not a finite number, even if published by another program | Refused by `cmd_vel_node.py`, zero speed sent |
 | Speed setting above 1.5 m/s or 2.0 rad/s, or not positive, at start or while running | Rejected |
-| Web page closed or Mac disconnected mid-drive | `robot_bridge_node.py` sends a stop after 1.5 s of silence |
+| Web page closed or Mac disconnected | `robot_bridge_node.py` sends a stop and cancels pending model answers after 1.5 s of silence, moving or not |
+| Messages without this session's key | Ignored by `robot_bridge_node.py` |
 | `cmd_vel_node.py` dies without warning (F1TENTH) | The converter notices the missing commands and sends zero speed |
 | ssh connection drops (e.g. Wi-Fi lost) while driving | `cmd_vel_node.py` sends zero speed and exits |
 | Chat ended with `quit`, or the script is stopped | Stop sent, then both nodes stopped, zero speed on shutdown |

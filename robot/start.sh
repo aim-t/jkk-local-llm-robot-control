@@ -27,14 +27,25 @@ try:
     if not 0 < float(speed) <= 1.5: problems.append("MAX_SPEED must be above 0 and at most 1.5 (m/s)")
 except ValueError: problems.append("MAX_SPEED must be a number")
 try:
-    if not 0.3 <= float(radius) <= 20: problems.append("TURN_RADIUS must be between 0.3 and 20 (m)")
-except ValueError: problems.append("TURN_RADIUS must be a number")
+    # Same limits as cmd_vel_node.py: above 0.3 m, at most 20 m.
+    if not 0.3 < float(radius) <= 20: problems.append("TURN_RADIUS must be above 0.3 and at most 20 (m)")
+    # A car cannot turn tighter than its steering allows: radius = wheelbase / tan(steering).
+    import math
+    tightest = float(wheelbase) / math.tan(float(steering))
+    if vehicle == "car" and float(radius) < tightest:
+        problems.append(f"TURN_RADIUS must be at least {tightest:.2f} m for this car (wheelbase / tan(MAX_STEERING))")
+except (ValueError, ZeroDivisionError): problems.append("TURN_RADIUS must be a number")
 if vehicle not in ("car", "legged"): problems.append("VEHICLE must be car or legged")
 for name, topic in (("CMD_VEL_TOPIC", cmd_vel), ("ODOM_TOPIC", odom), ("DRIVE_TOPIC", drive)):
     if not re.fullmatch(r"/[A-Za-z0-9_/]+", topic): problems.append(f"{name} must look like /name")
 for p in problems: print("Setting not accepted:", p)
 sys.exit(1 if problems else 0)
 CHECK
+# ROS declares these as decimals; a whole number like 2 would be read as an integer and refused.
+MAX_SPEED=$(printf '%.3f' "$MAX_SPEED"); TURN_RADIUS=$(printf '%.3f' "$TURN_RADIUS")
+WHEELBASE=$(printf '%.3f' "$WHEELBASE"); MAX_STEERING=$(printf '%.3f' "$MAX_STEERING")
+# A fresh key for this session: the robot's bridge ignores messages without it.
+export BRIDGE_TOKEN="$(python3 -c 'import secrets; print(secrets.token_hex(16))')"
 
 if ! ping -c 2 -t 4 "$ROBOT_IP" >/dev/null 2>&1; then
     echo "Robot not reachable at $ROBOT_IP."
@@ -124,7 +135,7 @@ if [ "${GUI:-0}" = 1 ]; then
     [ -x "$GUI_PYTHON" ] || { echo "The web page needs sim_mujoco/.venv (see sim_mujoco/README.md)."; exit 1; }
     echo "Starting the nodes on the robot..."
     # -tt gives the robot side a terminal, so closing this connection also stops the nodes there.
-    ssh -tt "${OWN_CONNECTION[@]}" "${SSH_OPTS[@]}" "$ROBOT_USER@$ROBOT_IP" "GUI=1 $REMOTE_COMMAND bash ~/$REMOTE_DIR/run_on_robot.sh" \
+    ssh -tt "${OWN_CONNECTION[@]}" "${SSH_OPTS[@]}" "$ROBOT_USER@$ROBOT_IP" "GUI=1 BRIDGE_TOKEN=$BRIDGE_TOKEN $REMOTE_COMMAND bash ~/$REMOTE_DIR/run_on_robot.sh" \
         > /tmp/llm_robot_session.log 2>&1 < /dev/null &
     SSH_PID=$!
     for _ in $(seq 1 90); do
@@ -133,7 +144,7 @@ if [ "${GUI:-0}" = 1 ]; then
         sleep 1
     done
     grep -q "Waiting for the web page" /tmp/llm_robot_session.log || { echo "The robot side did not start:"; cat /tmp/llm_robot_session.log; exit 1; }
-    [ -z "${NO_BROWSER:-}" ] && (sleep 3; open http://localhost:8765) &
+    [ -z "${NO_BROWSER:-}" ] && (sleep 3; open "http://localhost:${GUI_PORT:-8765}") &
     echo "Robot side running (log: /tmp/llm_robot_session.log). Opening the page."
     "$GUI_PYTHON" "$ROBOT_DIR/robot_gui.py" "$ROBOT_IP" "${ROBOT_NAME:-robot}"
     exit 0

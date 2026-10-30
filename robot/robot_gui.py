@@ -37,6 +37,7 @@ class RobotApp:
 
     def __init__(self, robot_ip, robot_name):
         self.robot = (robot_ip, ROBOT_PORT)
+        self.token = os.environ.get("BRIDGE_TOKEN", "")  # session key shared with robot_bridge_node.py
         self.robot_name = robot_name
         self.lock = threading.Lock()
         self.log = CommandLog()
@@ -64,7 +65,7 @@ class RobotApp:
 
     def send(self, message):
         try:
-            self.sock.sendto(json.dumps(message).encode(), self.robot)
+            self.sock.sendto(json.dumps({**message, "token": self.token}).encode(), self.robot)
         except OSError:
             pass  # robot not reachable; shown as "not connected" on the page
 
@@ -121,12 +122,16 @@ class RobotApp:
     def read_network(self):
         while True:
             try:
-                packet = self.sock.recv(65536)
+                packet, sender = self.sock.recvfrom(65536)
             except (BlockingIOError, ConnectionRefusedError):
                 return
+            if sender[0] != self.robot[0]:
+                continue  # only the robot we are talking to
             try:
                 message = json.loads(packet)
             except ValueError:
+                continue
+            if not isinstance(message, dict):
                 continue
             self.robot_seen = time.monotonic()
             if message.get("type") == "state":

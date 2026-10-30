@@ -8,8 +8,9 @@ runs the safety check, and publishes the result:
     /go2/command_blocked  commands that were refused, with the reason
 
 STOP (from the web page, the chat or send.py) also publishes on /llm/cancel. Then the answer
-being worked on is abandoned, and commands that queued up behind it are dropped, so nothing
-the model was busy with can move the robot after STOP. The node keeps running.
+being worked on is abandoned and every command that arrived before STOP is dropped, so nothing
+the model was busy with can move the robot after STOP. Commands sent after STOP run normally,
+and the node keeps running.
 
 Nothing is sent to robot motors here. Turning an approved command into the Go2's own
 movement messages is a separate step that depends on the lab's robot setup.
@@ -19,11 +20,11 @@ Run inside the ROS 2 container (see README), with Ollama running on the Mac:
 """
 
 import json
+import queue
+import threading
 import time
 
 import rclpy
-from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import Empty, String
 
@@ -31,8 +32,7 @@ from run_benchmark import Cancelled, ask
 from safety import check, check_against_text
 
 ANSWER_TIMEOUT_S = 10.0  # give up on the model after this long
-STALE_S = 5.0            # an answer that took longer than this is not acted on
-FLUSH_S = 0.3            # commands that arrive this soon after a cancelled one were queued behind it
+STALE_S = 5.0            # an answer ready more than this long after the command arrived is not acted on
 
 
 class Go2CommandNode(Node):
@@ -42,52 +42,62 @@ class Go2CommandNode(Node):
         self.approved = self.create_publisher(String, "/go2/command", 10)
         self.blocked = self.create_publisher(String, "/go2/command_blocked", 10)
         self.cancel_time = 0.0
-        self.flush_until = 0.0
-        # Commands are handled one at a time; the cancel signal has its own group, so it is
-        # received even while the node waits for the model.
-        self.create_subscription(String, "/voice_command", self.on_command, 10,
-                                 callback_group=MutuallyExclusiveCallbackGroup())
-        self.create_subscription(Empty, "/llm/cancel", self.on_cancel, 10,
-                                 callback_group=MutuallyExclusiveCallbackGroup())
+        # The callbacks only note when a command arrived and queue it; a worker thread asks the
+        # model. A command is dropped exactly when it arrived before the latest STOP, so commands
+        # typed after STOP always run, and STOP is heard even while the model is busy.
+        self.commands = queue.Queue()
+        self.create_subscription(String, "/voice_command", self.on_command, 10)
+        self.create_subscription(Empty, "/llm/cancel", self.on_cancel, 10)
 
-        # Load the model now so the first real command is not slow.
         # Load the model now so the first real command is not slow. Loading can take a while.
         warmup = ask(self.model, "Stand up.", timeout=120)
         self.get_logger().info(f"{self.model} ready (loaded in {warmup['load_s']:.1f} s). Waiting on /voice_command")
+        threading.Thread(target=self.work, daemon=True).start()
+
+    def on_command(self, message):
+        self.commands.put((message.data, time.monotonic()))
 
     def on_cancel(self, _message):
         self.cancel_time = time.monotonic()
         self.get_logger().info("STOP: cancelling the command in progress and any queued ones")
 
+    def stopped_since(self, arrived):
+        return self.cancel_time > arrived
+
     def cancelled_reply(self, text, why):
         self.publish(self.blocked, {"heard": text, "reason": why})
         self.get_logger().info(f"CANCELLED {text!r}: {why}")
 
-    def on_command(self, message):
-        text = message.data
-        entered = time.monotonic()
-        if entered < self.flush_until:  # was waiting in the queue when STOP came
-            self.flush_until = entered + FLUSH_S
+    def work(self):
+        while rclpy.ok():
+            try:
+                text, arrived = self.commands.get(timeout=0.5)
+            except queue.Empty:
+                continue
+            self.process(text, arrived)
+
+    def process(self, text, arrived):
+        if self.stopped_since(arrived):
             self.cancelled_reply(text, "cancelled by STOP before the model started on it")
             return
-        start = time.perf_counter()
         try:
             reply = ask(self.model, text, timeout=ANSWER_TIMEOUT_S,
-                        cancelled=lambda: self.cancel_time > entered)["reply"]
+                        cancelled=lambda: self.stopped_since(arrived))["reply"]
         except Cancelled:
-            self.flush_until = time.monotonic() + FLUSH_S
             self.cancelled_reply(text, "cancelled by STOP while the model was answering")
             return
         except Exception as error:  # network, timeout or a garbled answer: never move
-            self.publish(self.blocked, {"heard": text, "reason": f"no usable answer from the model: {error}"})
-            self.get_logger().error(f"no usable answer from the model: {error}")
+            if self.stopped_since(arrived):  # e.g. STOP while the model was still loading
+                self.cancelled_reply(text, "cancelled by STOP while the model was answering")
+            else:
+                self.publish(self.blocked, {"heard": text, "reason": f"no usable answer from the model: {error}"})
+                self.get_logger().error(f"no usable answer from the model: {error}")
             return
         command, reason = check(reply)
         command, reason = check_against_text(text, command) if command else (command, reason)
-        elapsed = time.perf_counter() - start
-        if command is not None and self.cancel_time > entered:
+        elapsed = time.monotonic() - arrived
+        if command is not None and self.stopped_since(arrived):
             # STOP came after the answer was complete but before it was sent on.
-            self.flush_until = time.monotonic() + FLUSH_S
             self.cancelled_reply(text, "cancelled by STOP")
             return
         if command is not None and elapsed > STALE_S:
@@ -108,10 +118,8 @@ class Go2CommandNode(Node):
 def main():
     rclpy.init()
     node = Go2CommandNode()
-    executor = MultiThreadedExecutor(num_threads=2)
-    executor.add_node(node)
     try:
-        executor.spin()
+        rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:

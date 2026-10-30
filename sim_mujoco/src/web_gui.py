@@ -96,17 +96,25 @@ class CommandLog:
         self.ignore_stop_until = time.monotonic() + 3.0
         return entry
 
-    def oldest_waiting(self):
-        return next((e for e in self.entries if e["status"] == "waiting for the language model"), None)
+    def oldest_waiting(self, text=None):
+        """The oldest command still waiting for the model; with text, the oldest with that text."""
+        waiting = [e for e in self.entries if e["status"] == "waiting for the language model"]
+        if text is not None:
+            waiting = [e for e in waiting if e["text"] == text]
+        return waiting[0] if waiting else None
 
     def on_event(self, kind, data, pose):
         if kind == "unsupported":
             return  # already handled when the posture command was approved
-        entry = self.oldest_waiting()
+        heard = data.get("heard") if kind == "blocked" else None
         if kind == "blocked" and str(data.get("reason", "")).startswith("cancelled"):
+            # Match by text: after our own STOP the cancelled command is already marked, and a
+            # newer command typed after STOP must not be mistaken for it.
+            entry = self.oldest_waiting(heard)
             if entry is not None:  # cancelled by a STOP from elsewhere (e.g. the chat on the robot)
                 entry.update(status="cancelled by STOP", success=None)
             return
+        entry = (self.oldest_waiting(heard) if heard else None) or self.oldest_waiting()
         if entry is None and data.get("action") == "stop" and time.monotonic() < self.ignore_stop_until:
             self.finish_moving(pose, "interrupted by stop")
             return  # our own STOP coming back; it already has its row
@@ -370,8 +378,8 @@ def make_handler(app):
                 app.send_stop()
             elif self.path == "/api/reset":
                 app.reset_requested = True
-            elif self.path == "/api/shutdown" and hasattr(app, "request_shutdown"):
-                app.request_shutdown()  # real robot only: ends the page server, start.sh stops the rest
+            elif self.path == "/api/shutdown":
+                app.request_shutdown()  # ends the page server; the start script stops the rest
             else:
                 self.reply(b'{"ok": false}', "application/json", 400)
                 return

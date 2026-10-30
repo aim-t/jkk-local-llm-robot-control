@@ -77,7 +77,7 @@ done
 echo "Speed $MAX_SPEED m/s, turn radius $TURN_RADIUS m, sending to $LISTEN_TOPIC, position from $ODOM_TOPIC."
 echo "Logs on the robot: /tmp/llm_cmd_vel.log, /tmp/llm_language.log, /tmp/llm_convert.log"
 if [ "${GUI:-0}" = 1 ]; then
-    python3 robot_bridge_node.py   # talks to the web page on the Mac; runs until the connection closes
+    BRIDGE_TOKEN=$BRIDGE_TOKEN python3 robot_bridge_node.py   # talks to the web page on the Mac; runs until the connection closes
 else
     python3 chat.py
 fi

@@ -565,3 +565,26 @@ Test with the stand-in robot given a motor deadband of 0.2 m/s (no movement belo
 | Car setting (no slow-down) | 4.9 s | target reached, 1.01 m |
 
 (times include about 1 s for the command to be sent.) A car turn of 90 degrees reached 90.6 degrees. The simulated dog was unaffected: 1.00 m reached; its turn and backward walk still end at the time limit, as before (weak turning in the simulation).
+
+## 30 October 2026: code review and fixes
+
+A high-effort `/code-review` of the racer-car work found ten problems. All were fixed and tested with a stand-in robot and a stand-in language model (a small test server that can be slow or fail on purpose), without touching the running car console.
+
+| Problem | Fix |
+|---|---|
+| STOP while the model was still loading could let a queued command run after STOP | `go2_command_node.py` records when each command arrives and queues it for a worker thread; a command is dropped exactly when it arrived before the latest STOP, and STOP is checked after every outcome, including model errors |
+| A command typed just after STOP could be dropped by the old 0.3 s window | Same fix: only commands that arrived before STOP are dropped |
+| When the page went silent, the bridge stopped only a moving robot and did not cancel the model | It always sends a stop and `/llm/cancel` |
+| Garbled ROS or UDP messages could crash the bridge and end the session | They are ignored |
+| Anyone on the network could command the robot through the bridge | `start.sh` makes a fresh random session key; the bridge ignores messages without it; the page only accepts updates from the robot's address |
+| Whole-number settings (e.g. `TURN_RADIUS=2`) made ROS refuse the node | Values are passed as decimals |
+| `TURN_RADIUS=0.3` passed the Mac check but was refused on the robot | Limits now match (above 0.3 m) |
+| A turn radius tighter than the car can steer made turns time out | Refused for cars below wheelbase / tan(steering limit): 0.87 m for car2 |
+| With `GUI_PORT` set, the browser still opened port 8765 | Opens the chosen port |
+| A "cancelled" notice after STOP could be attached to a command typed after STOP | Matched by the command's text |
+
+Also tidied: a duplicated comment, a copied helper function (`yaw_from_quaternion` now imported), and an unneeded check.
+
+Testing caught one bug in the fix itself: a worker method named `handle` clashed with rclpy's own `Node.handle`, so the language node crashed at start. Renamed, and all our ROS nodes were scanned for similar clashes.
+
+Results: STOP during a failing model load cancelled the command in progress and the one queued before STOP, while a command sent after STOP was approved. The bridge refused to start without a key, ignored commands with a missing or wrong key, survived garbled messages, and on a silent page sent a stop and one cancel. The real page on the Mac with the wrong key could not send; with the right key it drove the stand-in robot 1.00 m.
