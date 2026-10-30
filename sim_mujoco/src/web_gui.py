@@ -40,7 +40,7 @@ from go2_sim import Go2Sim
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PAGE = os.path.join(ROOT, "web", "index.html")
-WEB_PORT = 8765
+WEB_PORT = int(os.environ.get("GUI_PORT", 8765))  # another page already on 8765? set GUI_PORT
 UDP_PORT = 9870
 STEP_S = 0.02            # one policy step
 RENDER_EVERY = 3         # draw a picture every 3 steps, about 16 per second
@@ -74,8 +74,7 @@ class CommandLog:
     def __init__(self):
         self.entries = []
         self.moving = None  # the entry whose movement is being measured
-        self.stop_entry_pending = False
-        self.last_stop_row = 0.0  # a stop sent several times (robot_gui.py) gets one row
+        self.ignore_stop_until = 0.0  # the stop we sent comes back as an event; it has its row already
 
     def add(self, text, status="waiting for the language model", mode="typed", speech_info=None):
         entry = {"id": len(self.entries) + 1, "text": text, "time": datetime.now().strftime("%H:%M:%S"),
@@ -86,6 +85,17 @@ class CommandLog:
         self.entries.append(entry)
         return entry
 
+    def stop_pressed(self, pose, text="(stop button)", mode="button", speech_info=None):
+        """STOP: the movement ends, and commands still waiting for the model are cancelled."""
+        for waiting in self.entries:
+            if waiting["status"] == "waiting for the language model":
+                waiting.update(status="cancelled by STOP", success=None)
+        self.finish_moving(pose, "interrupted by stop")
+        entry = self.add(text, status="done", mode=mode, speech_info=speech_info)
+        entry.update(success=True, answer={"action": "stop"}, model_s=0.0)
+        self.ignore_stop_until = time.monotonic() + 3.0
+        return entry
+
     def oldest_waiting(self):
         return next((e for e in self.entries if e["status"] == "waiting for the language model"), None)
 
@@ -93,16 +103,15 @@ class CommandLog:
         if kind == "unsupported":
             return  # already handled when the posture command was approved
         entry = self.oldest_waiting()
-        if entry is None and data.get("action") == "stop" and self.stop_entry_pending:
-            self.stop_entry_pending = False  # the spoken stop already has its own row
-            self.finish_moving(pose, "interrupted by stop")
+        if kind == "blocked" and str(data.get("reason", "")).startswith("cancelled"):
+            if entry is not None:  # cancelled by a STOP from elsewhere (e.g. the chat on the robot)
+                entry.update(status="cancelled by STOP", success=None)
             return
-        if entry is None and data.get("action") == "stop" and time.monotonic() - self.last_stop_row < 1.0:
-            return  # the same stop arriving again
-        if entry is None:  # e.g. the Stop button, which does not go through the model
-            entry = self.add("(stop button)" if data.get("action") == "stop" else "(sent from elsewhere)")
-            if data.get("action") == "stop":
-                self.last_stop_row = time.monotonic()
+        if entry is None and data.get("action") == "stop" and time.monotonic() < self.ignore_stop_until:
+            self.finish_moving(pose, "interrupted by stop")
+            return  # our own STOP coming back; it already has its row
+        if entry is None:  # e.g. a stop sent from the chat on the robot
+            entry = self.add("(stop from elsewhere)" if data.get("action") == "stop" else "(sent from elsewhere)")
         entry["model_s"] = round(time.monotonic() - entry["sent"], 2)
 
         if kind == "blocked":
@@ -212,18 +221,16 @@ class App:
                 self.log.add("(nothing understood)", status=f"not sent: {info.get('error')}", mode="spoken", speech_info=info)
             return {"text": "", "sent": False, **info}
         if SPOKEN_STOP.match(text):
-            self.send_stop()
-            with self.lock:
-                entry = self.log.add(text, status="done", mode="spoken", speech_info=info)
-                entry.update(success=True, answer={"action": "stop"}, model_s=0.0)
-                self.log.stop_entry_pending = True
+            self.send_stop(text, "spoken", info)
             return {"text": text, "sent": True, "fast_stop": True, **info}
         self.send_text(text, mode="spoken", speech_info=info)
         return {"text": text, "sent": True, **info}
 
-    def send_stop(self):
+    def send_stop(self, text="(stop button)", mode="button", speech_info=None):
+        """STOP: end the movement and cancel what the language model is working on."""
         with self.lock:
             self.sim.command[:] = 0.0  # stop at once on this side too
+            self.log.stop_pressed(self.sim.pose(), text, mode, speech_info)
             if self.bridge_connected():
                 self.sock.sendto(json.dumps({"type": "stop"}).encode(), self.bridge)
 

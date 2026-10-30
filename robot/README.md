@@ -85,7 +85,7 @@ Steps, with the mentor present:
 2. **Start everything with one command:** `bash robot/start_gui.sh` (speed 0.3 m/s by default). It starts the language model on the Mac, the car's driver, and our nodes on the car, then opens the page. The header should show "car2 connected". Prefer the terminal chat? `bash robot/start.sh`.
 3. **If a controller is connected, hold button 4**, then type (or speak) `Drive forward half a metre.` The wheels should spin forward and stop. Try `Turn left 45 degrees.` (wheels steer left and spin), then STOP.
 4. **Only then on the floor**, in a clear area of at least 3 x 3 m.
-5. **To stop the car at any time:** press STOP on the page, let go of button 4 (if a controller is used), or close the page (the car stops within 1.5 s).
+5. **To stop the car at any time:** press STOP on the page, let go of button 4 (if a controller is used), or close the page (the car stops within 1.5 s). STOP ends the movement **and** cancels whatever the language model is still working on, including commands typed while it was busy, so nothing runs after STOP. Everything else keeps running for the next command.
 6. **To shut everything down:** press **Shut down** on the page, or Ctrl+C in the terminal. In that order it stops the car and our nodes, then the car's driver, then the language model. A driver that was already running before you started is left running.
 
 Run all robot scripts from the **Terminal app** unless VS Code has the macOS Local Network permission.

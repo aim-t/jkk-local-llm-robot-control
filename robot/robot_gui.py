@@ -76,7 +76,10 @@ class RobotApp:
             self.log.add(text, mode=mode, speech_info=speech_info)
             self.send({"type": "text", "text": text})
 
-    def send_stop(self):
+    def send_stop(self, text="(stop button)", mode="button", speech_info=None):
+        """STOP: end the movement and cancel what the language model is working on."""
+        with self.lock:
+            self.log.stop_pressed(self.pose, text, mode, speech_info)
         for _ in range(3):  # UDP can drop a message; a stop must arrive
             self.send({"type": "stop"})
 

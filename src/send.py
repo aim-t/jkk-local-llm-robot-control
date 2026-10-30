@@ -19,7 +19,7 @@ import time
 
 import rclpy
 from geometry_msgs.msg import Twist
-from std_msgs.msg import String
+from std_msgs.msg import Empty, String
 
 from safety import check
 
@@ -36,11 +36,13 @@ def main():
     text_pub = node.create_publisher(String, "/voice_command", 10)
     command_pub = node.create_publisher(String, "/go2/command", 10)
     cmd_vel_pub = node.create_publisher(Twist, "/cmd_vel", 10)
+    cancel_pub = node.create_publisher(Empty, "/llm/cancel", 10)
     time.sleep(1.0)  # give ROS a moment to connect the publishers to their listeners
 
     if kind == "text":
         text_pub.publish(String(data=" ".join(sys.argv[2:])))
     elif kind == "stop":
+        cancel_pub.publish(Empty())  # drop what the language model is still working on
         command_pub.publish(String(data=json.dumps({"action": "stop", "distance_m": 0.0, "angle_deg": 0.0})))
         for _ in range(10):
             cmd_vel_pub.publish(Twist())

@@ -20,7 +20,7 @@ import rclpy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import Empty, String
 
 SIM_ADDRESS = (os.environ.get("SIM_HOST", "host.docker.internal"), 9870)
 RATE_HZ = 50
@@ -34,6 +34,7 @@ class MujocoBridge(Node):
         self.voice = self.create_publisher(String, "/voice_command", 10)
         self.command_pub = self.create_publisher(String, "/go2/command", 10)
         self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.cancel_pub = self.create_publisher(Empty, "/llm/cancel", 10)
         self.create_subscription(Twist, "/cmd_vel", self.on_cmd_vel, 10)
         for topic, kind in (("/go2/command", "approved"), ("/go2/command_blocked", "blocked"),
                             ("/go2/command_unsupported", "unsupported")):
@@ -73,6 +74,7 @@ class MujocoBridge(Node):
             elif kind == "text":
                 self.voice.publish(String(data=message["text"]))
             elif kind == "stop":
+                self.cancel_pub.publish(Empty())  # drop what the language model is still working on
                 self.command_pub.publish(String(data=STOP_COMMAND))
                 self.cmd_vel_pub.publish(Twist())
 

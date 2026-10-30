@@ -71,8 +71,16 @@ def get(path):
     return json.loads(urllib.request.urlopen(OLLAMA_URL + path, timeout=30).read())
 
 
-def ask(model, command, timeout=600):
-    """Send one command and return the reply text plus timing numbers."""
+class Cancelled(Exception):
+    """ask() was told to stop (e.g. the STOP button) before the answer was complete."""
+
+
+def ask(model, command, timeout=600, cancelled=None):
+    """Send one command and return the reply text plus timing numbers.
+
+    cancelled: optional function; if it returns True while the answer is still arriving,
+    the request is closed and Cancelled is raised.
+    """
     payload = {
         "model": model,
         "messages": [
@@ -88,7 +96,11 @@ def ask(model, command, timeout=600):
     first_token_s = None
     text = ""
     final = {}
-    for line in post("/api/chat", payload, stream=True, timeout=timeout):
+    response = post("/api/chat", payload, stream=True, timeout=timeout)
+    for line in response:
+        if cancelled is not None and cancelled():
+            response.close()  # Ollama stops generating when the connection closes
+            raise Cancelled()
         chunk = json.loads(line)
         piece = chunk.get("message", {}).get("content", "")
         if piece and first_token_s is None:

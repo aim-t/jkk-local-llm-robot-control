@@ -118,7 +118,7 @@
           Saying “stop” stops at once.</div>
       </div>
       <div class="row">
-        <button class="stop" id="stop" title="Stops at once, without the language model">STOP</button>
+        <button class="stop" id="stop" title="Stops the movement at once and cancels what the language model is still working on. Everything keeps running for the next command.">STOP</button>
         <button id="reset" title="Put the dog back at the start">Reset dog</button>
         <button id="shutdown" title="Stop the robot and shut down everything that was started" hidden>Shut down</button>
       </div>
@@ -213,6 +213,7 @@ function verdict(e) {
   if (e.success === true) return ["ok", e.unit ? "Worked" : "Done"];
   if (e.success === false && e.status === "done") return ["bad", "Off target"];
   if (e.status.startsWith("refused")) return ["warn", "Refused"];
+  if (e.status.startsWith("cancelled")) return ["warn", "Cancelled"];
   if (e.status.startsWith("not available")) return ["warn", "Not in simulation"];
   if (e.status.startsWith("interrupted") || e.status.startsWith("replaced")) return ["warn", "Interrupted"];
   return ["bad", "Failed"];
@@ -237,7 +238,8 @@ function renderRows(log) {
   for (const e of log) {
     const [cls, word] = verdict(e);
     const tr = document.createElement("tr");
-    const how = e.mode === "spoken" ? `spoken${e.speech && e.speech.transcribe_s !== undefined ? ` (${e.speech.transcribe_s} s)` : ""}` : "typed";
+    const how = e.mode === "spoken" ? `spoken${e.speech && e.speech.transcribe_s !== undefined ? ` (${e.speech.transcribe_s} s)` : ""}`
+              : e.mode === "button" ? "STOP button" : "typed";
     const cells = [e.id, e.time, how, e.text, e.reason ? "–" : describe(e.answer), e.model_s === null ? "–" : `${e.model_s} s`,
                    amount(e.target, e.unit), amount(e.achieved, e.unit), amount(e.error, e.unit),
                    e.duration_s === null ? "–" : `${e.duration_s} s`];

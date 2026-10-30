@@ -521,3 +521,22 @@ Problems found and fixed while testing on the real car (no driving commands were
 - After Shut down, our four nodes kept running on the car: the session shared one ssh connection with other commands (ControlMaster), so closing it did not hang up. The node session now uses its own connection (the options must come before the shared ones, since ssh uses the first value), and shutdown also stops our nodes on the car explicitly.
 
 Verified on car2: after Shut down and after Ctrl+C (typed into a real pseudo-terminal), no driver and none of our nodes were left on the car, and the page server and language model on the Mac were stopped. The last line of the car's movement log was "zero speed sent (node shutting down)".
+
+## 30 October 2026: STOP also cancels the language model
+
+Before, STOP only ended the current movement. A command still being answered by the model (about 0.7 s) could arrive after STOP and start a new movement, and commands typed while the model was busy would still run.
+
+Now every STOP (page button, spoken "stop", the chat's empty line, `send.py stop`, both bridges) also publishes `std_msgs/Empty` on `/llm/cancel`. `go2_command_node.py` listens on its own callback group in a `MultiThreadedExecutor`, so it hears the cancel while waiting for the model. It then closes the streaming request (`ask(..., cancelled=...)`, which stops Ollama generating), refuses that command with "cancelled by STOP", and drops commands that were queued behind it. Nothing else is stopped; **Shut down** remains the way to turn the whole system off.
+
+The page's history now gives each STOP press its own row ("STOP button") and marks commands that were waiting as "Cancelled". Before, a STOP pressed while a command waited was wrongly recorded as that command's answer.
+
+Test in the simulation (port 8766, `GUI_PORT` is new):
+
+| Test | Result |
+|---|---|
+| STOP 0.2 s after a command | cancelled while the model was answering; no movement |
+| Two commands, then STOP | first cancelled while answering, second before the model started; no movement |
+| New command after STOP | walked 0.99 m |
+| STOP during a 3 m walk | stopped at 0.98 m |
+
+During testing, port 8765 was already used by the user's own running car console, so the first test commands went to it; it showed "not sent: the robot is not connected" (the car was offline), so nothing reached the car.
