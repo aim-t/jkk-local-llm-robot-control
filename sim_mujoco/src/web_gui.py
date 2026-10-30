@@ -13,13 +13,17 @@ Each typed command is followed from start to finish:
 A move counts as successful within 10 cm or 10 % of the target, a turn within 10 degrees
 or 10 %. These tolerances are this page's own choice, not a standard.
 
-Only Python's standard library is used for the web server and images, so nothing extra
-needs installing.
+Commands can be typed or spoken. Spoken commands are recorded in the browser while the
+microphone button is held, turned into text by a local Whisper model (speech.py), and then
+go through exactly the same pipeline as typed text. A spoken "stop" skips the model.
+
+The web server and images use only Python's standard library; speech uses pywhispercpp.
 """
 
 import json
 import math
 import os
+import re
 import socket
 import struct
 import threading
@@ -29,7 +33,9 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import mujoco
+import numpy as np
 
+import speech
 from go2_sim import Go2Sim
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -42,6 +48,8 @@ COMMAND_TIMEOUT_S = 0.5  # no /cmd_vel for this long: stand still
 ANSWER_TIMEOUT_S = 8.0   # no answer from the language node for this long: give up
 SETTLE_S = 0.4           # speed must stay zero this long before a movement counts as finished
 POSTURES = ("stand_up", "sit", "lie_down")
+# A spoken stop skips the language model, like the STOP button, so it acts at once.
+SPOKEN_STOP = re.compile(r"^\W*(stop|halt|freeze|stop now|stop stop|stop stop stop)\W*$", re.IGNORECASE)
 
 
 def encode_png(image):
@@ -66,9 +74,11 @@ class CommandLog:
     def __init__(self):
         self.entries = []
         self.moving = None  # the entry whose movement is being measured
+        self.stop_entry_pending = False
 
-    def add(self, text, status="waiting for the language model"):
+    def add(self, text, status="waiting for the language model", mode="typed", speech_info=None):
         entry = {"id": len(self.entries) + 1, "text": text, "time": datetime.now().strftime("%H:%M:%S"),
+                 "mode": mode, "speech": speech_info,
                  "sent": time.monotonic(), "status": status, "answer": None, "reason": None,
                  "model_s": None, "target": None, "achieved": None, "error": None, "unit": None,
                  "duration_s": None, "success": None}
@@ -82,6 +92,10 @@ class CommandLog:
         if kind == "unsupported":
             return  # already handled when the posture command was approved
         entry = self.oldest_waiting()
+        if entry is None and data.get("action") == "stop" and self.stop_entry_pending:
+            self.stop_entry_pending = False  # the spoken stop already has its own row
+            self.finish_moving(pose, "interrupted by stop")
+            return
         if entry is None:  # e.g. the Stop button, which does not go through the model
             entry = self.add("(stop button)" if data.get("action") == "stop" else "(sent from elsewhere)")
         entry["model_s"] = round(time.monotonic() - entry["sent"], 2)
@@ -168,6 +182,7 @@ class App:
         self.bridge_seen = 0.0
         self.last_cmd_vel = 0.0
         self.reset_requested = False
+        self.speech_status = "loading"
         self.fps = 0.0
         self.started = time.monotonic()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -175,13 +190,31 @@ class App:
         self.sock.setblocking(False)
 
     # ---- called from the web server's threads ----
-    def send_text(self, text):
+    def send_text(self, text, mode="typed", speech_info=None):
         with self.lock:
             if not self.bridge_connected():
-                self.log.add(text, status="not sent: the ROS 2 bridge is not running")
+                self.log.add(text, status="not sent: the ROS 2 bridge is not running", mode=mode, speech_info=speech_info)
                 return
-            self.log.add(text)
+            self.log.add(text, mode=mode, speech_info=speech_info)
             self.sock.sendto(json.dumps({"type": "text", "text": text}).encode(), self.bridge)
+
+    def send_speech(self, pcm_bytes):
+        """Raw 16 kHz, 16-bit mono sound from the page -> text -> the same path as typed text."""
+        samples = np.frombuffer(pcm_bytes[: len(pcm_bytes) // 2 * 2], dtype=np.int16)
+        text, info = speech.transcribe(samples)
+        if not text:
+            with self.lock:
+                self.log.add("(nothing understood)", status=f"not sent: {info.get('error')}", mode="spoken", speech_info=info)
+            return {"text": "", "sent": False, **info}
+        if SPOKEN_STOP.match(text):
+            self.send_stop()
+            with self.lock:
+                entry = self.log.add(text, status="done", mode="spoken", speech_info=info)
+                entry.update(success=True, answer={"action": "stop"}, model_s=0.0)
+                self.log.stop_entry_pending = True
+            return {"text": text, "sent": True, "fast_stop": True, **info}
+        self.send_text(text, mode="spoken", speech_info=info)
+        return {"text": text, "sent": True, **info}
 
     def send_stop(self):
         with self.lock:
@@ -205,6 +238,7 @@ class App:
                          "falls": self.falls, "fps": round(self.fps, 1),
                          "sim_time": round(time.monotonic() - self.started)},
                 "bridge": self.bridge_connected(),
+                "speech": self.speech_status,
                 "path": self.path[-1500:],
                 "log": self.log.public(),
             }
@@ -303,7 +337,15 @@ def make_handler(app):
 
         def do_POST(self):
             length = int(self.headers.get("Content-Length", 0))
-            body = json.loads(self.rfile.read(length) or b"{}")
+            raw = self.rfile.read(length)
+            if self.path == "/api/speech":
+                if app.speech_status != "ready":
+                    self.reply(json.dumps({"text": "", "sent": False, "error": f"speech model {app.speech_status}"}).encode(),
+                               "application/json", 503)
+                    return
+                self.reply(json.dumps(app.send_speech(raw)).encode(), "application/json")
+                return
+            body = json.loads(raw or b"{}")
             if self.path == "/api/command" and body.get("text", "").strip():
                 app.send_text(body["text"].strip()[:300])
             elif self.path == "/api/stop":
@@ -320,6 +362,16 @@ def make_handler(app):
 
 def main():
     app = App()
+
+    def load_speech():
+        try:
+            speech.load()
+            app.speech_status = "ready"
+        except Exception as error:  # the page still works for typing
+            app.speech_status = f"unavailable ({error})"
+            print(f"Speech model could not be loaded: {error}", flush=True)
+    threading.Thread(target=load_speech, daemon=True).start()
+
     server = ThreadingHTTPServer(("127.0.0.1", WEB_PORT), make_handler(app))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     print(f"Open http://localhost:{WEB_PORT} in your browser. Press Ctrl+C here to stop.", flush=True)

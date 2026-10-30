@@ -63,6 +63,18 @@
   .pill.ok { background: var(--ok-bg); } .pill.bad { background: var(--bad-bg); }
   .pill.warn { background: var(--warn-bg); } .pill.info { background: var(--info-bg); }
   .empty { color: var(--muted); padding: 14px 8px; }
+  .tabs { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 9px; margin-bottom: 12px; }
+  .tab { flex: 1; border: 0; background: transparent; padding: 7px; font-weight: 600; color: var(--muted); }
+  .tab.active { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .mode[hidden] { display: none; }
+  #mic { width: 100%; padding: 22px 12px; font-size: 16px; font-weight: 700; border-radius: 12px;
+         background: var(--accent); border-color: var(--accent); color: #fff; touch-action: none; user-select: none;
+         -webkit-user-select: none; }
+  #mic.recording { background: var(--stop); border-color: var(--stop); }
+  #mic:disabled { opacity: .5; cursor: not-allowed; }
+  .meter { height: 6px; background: var(--bg); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .meter div { height: 100%; width: 0; background: var(--ok); transition: width 60ms linear; }
+  #heard { margin-top: 10px; min-height: 1.45em; }
 </style>
 </head>
 <body>
@@ -88,11 +100,23 @@
   <div class="stack">
     <section class="panel">
       <h2>Command</h2>
-      <form id="form">
-        <input id="text" type="text" placeholder="e.g. Walk forward one metre." autocomplete="off" autofocus>
-        <button class="primary" type="submit">Send</button>
-      </form>
-      <div class="chips" id="chips"></div>
+      <div class="tabs" role="tablist">
+        <button class="tab active" id="tab-type" type="button" role="tab">Type</button>
+        <button class="tab" id="tab-speak" type="button" role="tab">Speak</button>
+      </div>
+      <div class="mode" id="mode-type">
+        <form id="form">
+          <input id="text" type="text" placeholder="e.g. Walk forward one metre." autocomplete="off" autofocus>
+          <button class="primary" type="submit">Send</button>
+        </form>
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="mode" id="mode-speak" hidden>
+        <button id="mic" type="button">Hold to talk</button>
+        <div class="meter"><div id="level"></div></div>
+        <div id="heard" class="small">Hold the button (or the space bar) while you speak, then let go.
+          Saying “stop” stops at once.</div>
+      </div>
       <div class="row">
         <button class="stop" id="stop" title="Stops at once, without the language model">STOP</button>
         <button id="reset" title="Put the dog back at the start">Reset dog</button>
@@ -121,9 +145,9 @@
   <section class="panel history">
     <h2>Command history</h2>
     <table>
-      <thead><tr><th>#</th><th>Time</th><th>You typed</th><th>Model understood</th><th>Model time</th>
+      <thead><tr><th>#</th><th>Time</th><th>How</th><th>You said or typed</th><th>Model understood</th><th>Model time</th>
         <th>Target</th><th>Achieved</th><th>Error</th><th>Duration</th><th>Status</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="10" class="empty">Nothing yet.</td></tr></tbody>
+      <tbody id="rows"><tr><td colspan="11" class="empty">Nothing yet.</td></tr></tbody>
     </table>
   </section>
 </main>
@@ -186,7 +210,7 @@ function verdict(e) {
 function renderLatest(e) {
   if (!e) return;
   const [cls, word] = verdict(e);
-  let detail = `“${e.text}”`;
+  let detail = `${e.mode === "spoken" ? "Heard" : "Typed"} “${e.text}”`;
   if (e.answer && e.answer.action) detail += ` → ${describe(e.answer)}`;
   if (e.model_s !== null) detail += ` · model ${e.model_s} s`;
   if (e.target !== null) detail += ` · reached ${amount(e.achieved, e.unit)} of ${amount(e.target, e.unit)}`;
@@ -202,7 +226,8 @@ function renderRows(log) {
   for (const e of log) {
     const [cls, word] = verdict(e);
     const tr = document.createElement("tr");
-    const cells = [e.id, e.time, e.text, e.reason ? "–" : describe(e.answer), e.model_s === null ? "–" : `${e.model_s} s`,
+    const how = e.mode === "spoken" ? `spoken${e.speech && e.speech.transcribe_s !== undefined ? ` (${e.speech.transcribe_s} s)` : ""}` : "typed";
+    const cells = [e.id, e.time, how, e.text, e.reason ? "–" : describe(e.answer), e.model_s === null ? "–" : `${e.model_s} s`,
                    amount(e.target, e.unit), amount(e.achieved, e.unit), amount(e.error, e.unit),
                    e.duration_s === null ? "–" : `${e.duration_s} s`];
     for (const c of cells) { const td = document.createElement("td"); td.textContent = c; tr.appendChild(td); }
@@ -245,6 +270,119 @@ function drawMap(path, live) {
   ctx.closePath(); ctx.fill();
 }
 
+// ---- Modes: Type or Speak ----
+function setMode(mode) {
+  $("tab-type").classList.toggle("active", mode === "type");
+  $("tab-speak").classList.toggle("active", mode === "speak");
+  $("mode-type").hidden = mode !== "type";
+  $("mode-speak").hidden = mode !== "speak";
+  if (mode === "type") $("text").focus();
+  try { localStorage.setItem("go2-mode", mode); } catch (e) {}
+}
+$("tab-type").addEventListener("click", () => setMode("type"));
+$("tab-speak").addEventListener("click", () => setMode("speak"));
+try { if (localStorage.getItem("go2-mode") === "speak") setMode("speak"); } catch (e) {}
+
+// ---- Push-to-talk recording ----
+// The browser records while the button is held. The sound is converted to 16 000 samples per
+// second, 16-bit, which is what Whisper expects, and sent to the page server for recognition.
+const TARGET_RATE = 16000;
+let audio = null;          // { ctx, source, processor }
+let chunks = [], recording = false, busy = false;
+
+async function ensureMicrophone() {
+  if (audio) return true;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia(
+      { audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = ctx.createMediaStreamSource(stream);
+    const processor = ctx.createScriptProcessor(4096, 1, 1);
+    processor.onaudioprocess = (event) => {
+      const input = event.inputBuffer.getChannelData(0);
+      let peak = 0;
+      for (let i = 0; i < input.length; i++) peak = Math.max(peak, Math.abs(input[i]));
+      $("level").style.width = recording ? `${Math.min(100, peak * 140)}%` : "0";
+      if (recording) chunks.push(new Float32Array(input));
+    };
+    source.connect(processor);
+    processor.connect(ctx.destination);
+    audio = { ctx, source, processor };
+    return true;
+  } catch (error) {
+    $("heard").textContent = "Microphone not available: " + error.message +
+      ". Allow microphone access for this page in the browser.";
+    return false;
+  }
+}
+
+function toPcm16(parts, fromRate) {
+  const length = parts.reduce((n, p) => n + p.length, 0);
+  const joined = new Float32Array(length);
+  let offset = 0;
+  for (const p of parts) { joined.set(p, offset); offset += p.length; }
+  const ratio = fromRate / TARGET_RATE, outLength = Math.floor(length / ratio);
+  const out = new Int16Array(outLength);
+  for (let i = 0; i < outLength; i++) {
+    const start = Math.floor(i * ratio), end = Math.min(length, Math.floor((i + 1) * ratio));
+    let sum = 0;
+    for (let j = start; j < end; j++) sum += joined[j];
+    const v = Math.max(-1, Math.min(1, sum / Math.max(1, end - start)));
+    out[i] = v < 0 ? v * 32768 : v * 32767;
+  }
+  return out;
+}
+
+async function startTalking() {
+  if (recording || busy) return;
+  if (!(await ensureMicrophone())) return;
+  if (audio.ctx.state === "suspended") await audio.ctx.resume();
+  chunks = []; recording = true;
+  $("mic").classList.add("recording");
+  $("mic").textContent = "Listening… release to send";
+  $("heard").textContent = "";
+}
+
+async function stopTalking() {
+  if (!recording) return;
+  recording = false;
+  $("mic").classList.remove("recording");
+  $("level").style.width = "0";
+  const pcm = toPcm16(chunks, audio.ctx.sampleRate);
+  chunks = [];
+  busy = true;
+  $("mic").disabled = true;
+  $("mic").textContent = "Recognising…";
+  try {
+    const response = await fetch("/api/speech", { method: "POST",
+      headers: { "Content-Type": "application/octet-stream" }, body: pcm.buffer });
+    const result = await response.json();
+    if (result.text) {
+      $("heard").textContent = `Heard “${result.text}”` +
+        (result.fast_stop ? " — stopped at once" : "") + ` · recognised in ${result.transcribe_s} s`;
+    } else {
+      $("heard").textContent = "Not sent: " + (result.error || "nothing understood") + ". Try again.";
+    }
+  } catch (error) {
+    $("heard").textContent = "Could not reach the page server.";
+  }
+  busy = false;
+  $("mic").disabled = false;
+  $("mic").textContent = "Hold to talk";
+}
+
+$("mic").addEventListener("pointerdown", (e) => { e.preventDefault(); $("mic").setPointerCapture(e.pointerId); startTalking(); });
+$("mic").addEventListener("pointerup", stopTalking);
+$("mic").addEventListener("pointercancel", stopTalking);
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && !e.repeat && !$("mode-speak").hidden && document.activeElement.tagName !== "INPUT") {
+    e.preventDefault(); startTalking();
+  }
+});
+document.addEventListener("keyup", (e) => {
+  if (e.code === "Space" && !$("mode-speak").hidden) { e.preventDefault(); stopTalking(); }
+});
+
 async function poll() {
   try {
     const s = await (await fetch("/api/state")).json();
@@ -252,6 +390,11 @@ async function poll() {
     $("bridge").textContent = s.bridge ? "ROS 2 connected" : "ROS 2 not connected";
     $("bridge").className = "badge" + (s.bridge ? " on" : "");
     $("meta").textContent = `MuJoCo simulation · ${L.sim_time} s`;
+    if (s.speech !== "ready" && !recording && !busy) {
+      $("mic").disabled = true; $("mic").textContent = `Speech model ${s.speech}…`;
+    } else if (s.speech === "ready" && $("mic").disabled && !busy) {
+      $("mic").disabled = false; $("mic").textContent = "Hold to talk";
+    }
     $("m-speed").textContent = `${L.speed.toFixed(2)} m/s`;
     $("m-speed-cmd").textContent = `asked ${L.cmd_speed.toFixed(2)} m/s`;
     $("m-turn").textContent = `${L.turn_rate.toFixed(2)} rad/s`;

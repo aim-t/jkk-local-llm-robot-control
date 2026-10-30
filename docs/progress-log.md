@@ -375,3 +375,32 @@ With the new prompt, the model converted 2 km, 1 km, 0.5 km, "two kilometres" an
 | Held-out set (60) | 57 | 58 | `results/20261028-002843_llama3.2-3b.json` |
 
 New errors on the tuning set: "Go forward 1500 millimetres" became 15 m (refused by the 5 m limit) and "Fetch the ball" was no longer refused by the model. Median time per command was 0.78 s, against 0.65 s before; the Ollama server was already running with settings this test did not control, so the timing is not comparable.
+
+## 30 October 2026: speech input for the web console
+
+Branch `feature/voice-input`. Requirements agreed with the user: speech to text (not text to speech), typing kept as a separate second mode, local Whisper, in the web console only, push-to-talk, English.
+
+- `sim_mujoco/src/speech.py` runs Whisper base.en locally through whisper.cpp (`pywhispercpp` 1.5.1, MIT, about 5 MB installed into `sim_mujoco/.venv`). The model file is `ggml-base.en.bin` (148 MB, SHA-1 137c40403d78fd54d454da0f9bd998f78703390c), downloaded by `download_assets.sh` and not stored in git.
+- The page has Type and Speak tabs. In Speak mode the browser records while a button or the space bar is held and sends 16 kHz, 16-bit sound to the page server. Recognised text enters the same pipeline as typed text. A spoken "stop" bypasses the language model.
+- Silence and recordings shorter than 0.3 s are not sent.
+
+### Test
+
+Eight sentences generated with the macOS `say` voice and converted to 16 kHz: all eight were transcribed correctly, in 0.06 to 0.33 s each (the first includes start-up). Through the web console with the full pipeline:
+
+| Spoken | Heard | Result |
+|---|---|---|
+| Walk forward one metre. | Walk forward 1 meter. | walked 1.00 m, worked |
+| Turn left ninety degrees. | turn left 90 degrees. | turned 83 degrees, worked |
+| Walk forward two kilometres. | Walk forward 2 kilometers. | refused by the safety check |
+| Sit down. | Sit down. | not available in the simulation |
+| Walk forward three metres. | Walk forward 3 meters. | interrupted by the spoken stop after 0.90 m |
+| Stop. | Stop. | stopped at once, no language model |
+| (one second of silence) | | not sent: silence |
+
+Recognition added 0.08 to 0.13 s per command; the language model took 0.77 to 0.96 s.
+
+### Limits
+
+- Tested with a synthetic voice, not a real microphone, accents or a noisy lab. Real speech may be misheard more often, especially numbers.
+- The microphone part of the page could not be tested here; it needs a browser and a person speaking.

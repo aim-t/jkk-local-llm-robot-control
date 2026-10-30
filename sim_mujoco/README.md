@@ -23,6 +23,7 @@ The policy was trained in Isaac Lab and is reused here without retraining ("sim2
 | `src/run_sim.py` | Runs the simulation in real time, with or without a window, and exchanges speed and position with ROS 2 over UDP port 9870 |
 | `src/ros_bridge_node.py` | Runs in the ROS 2 container: `/cmd_vel` to the simulation, simulation to `/odom` |
 | `src/web_gui.py`, `web/index.html` | The web console: simulation, camera picture and results page on http://localhost:8765 |
+| `src/speech.py` | Speech to text with a local Whisper model (whisper.cpp through pywhispercpp) |
 | `start_gui.sh` | Starts everything for the web console with one command |
 | `src/check_walk.py` | Quick test without a window or ROS 2: stand, walk, turn, walk back |
 
@@ -31,7 +32,7 @@ The policy was trained in Isaac Lab and is reused here without retraining ("sim2
 ```bash
 bash sim_mujoco/download_assets.sh   # the Go2 model and the policy; not stored in git
 uv venv sim_mujoco/.venv --python 3.12
-uv pip install --python sim_mujoco/.venv/bin/python mujoco==3.17.0
+uv pip install --python sim_mujoco/.venv/bin/python mujoco==3.17.0 pywhispercpp==1.5.1
 ln -s ~/.local/share/uv/python/cpython-3.12.10-macos-aarch64-none/lib/libpython3.12.dylib sim_mujoco/.venv/lib/libpython3.12.dylib
 ```
 
@@ -83,6 +84,13 @@ On the page you can type a command or click an example, and press STOP (stops at
 - the live camera view and the path seen from above;
 - live speed and turn rate against what was asked, heading, position, body height and falls;
 - for every command: what the model understood, how long it took, the target, what the dog actually achieved, the error, and whether it worked.
+
+**Two ways to give commands**, switched with the Type and Speak tabs:
+
+- **Type:** write a sentence and press Send, or click an example.
+- **Speak:** hold the "Hold to talk" button (or the space bar), say the command, and let go. A local Whisper model (`speech_models/ggml-base.en.bin`, English) turns it into text on the Mac, with no internet, and the text then goes through the same model, safety check and nodes as typed text. Saying just "stop" skips the language model and stops at once. The first time, the browser asks for microphone permission.
+
+The history table shows how each command was given, and for spoken ones how long recognition took.
 
 A move counts as "Worked" within 10 cm or 10 % of the target, a turn within 10 degrees or 10 %. These tolerances are the page's own choice. Press Ctrl+C in the terminal to stop everything; the script removes the container and stops the language model if it started it.
 
