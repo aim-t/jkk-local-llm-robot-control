@@ -3,7 +3,7 @@
 #     bash robot/start.sh
 # Optional settings:  MAX_SPEED=0.3 TURN_RADIUS=1.0 VEHICLE=car CMD_VEL_TOPIC=/cmd_vel ODOM_TOPIC=/odom
 #                     DRIVE_TOPIC=/drive (F1TENTH cars; 'none' to send Twist straight to CMD_VEL_TOPIC)
-#                     WHEELBASE=0.33 MAX_STEERING=0.34
+#                     WHEELBASE=0.25 MAX_STEERING=0.28 (car2's values, from its vesc.yaml)
 source "$(dirname "$0")/env.sh"
 
 # Settings end up in a command run on the robot, so allow only plain values within safe limits.
@@ -11,7 +11,7 @@ MAX_SPEED="${MAX_SPEED:-0.3}"; TURN_RADIUS="${TURN_RADIUS:-1.0}"; VEHICLE="${VEH
 CMD_VEL_TOPIC="${CMD_VEL_TOPIC:-/cmd_vel}"; ODOM_TOPIC="${ODOM_TOPIC:-/odom}"
 DRIVE_TOPIC="${DRIVE_TOPIC:-/drive}"; [ "$DRIVE_TOPIC" = none ] && DRIVE_TOPIC=""
 [ "$VEHICLE" = legged ] && [ "${DRIVE_TOPIC:-}" = /drive ] && DRIVE_TOPIC=""
-WHEELBASE="${WHEELBASE:-0.33}"; MAX_STEERING="${MAX_STEERING:-0.34}"
+WHEELBASE="${WHEELBASE:-0.25}"; MAX_STEERING="${MAX_STEERING:-0.28}"
 python3 - "$MAX_SPEED" "$TURN_RADIUS" "$VEHICLE" "$CMD_VEL_TOPIC" "$ODOM_TOPIC" "${DRIVE_TOPIC:-/none}" "$WHEELBASE" "$MAX_STEERING" <<'CHECK' || exit 1
 import re, sys
 speed, radius, vehicle, cmd_vel, odom, drive, wheelbase, steering = sys.argv[1:]

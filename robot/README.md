@@ -53,8 +53,8 @@ Put them in front of `start.sh`, for example `MAX_SPEED=0.2 bash robot/start.sh`
 | `TURN_RADIUS` | 1.0 | Car turns drive on a circle of this radius in metres. Must not be below the car's minimum. |
 | `VEHICLE` | car | `car` turns while driving forward; `legged` turns on the spot (Go2). |
 | `DRIVE_TOPIC` | /drive | F1TENTH cars listen for speed and steering here. Set `none` for robots driven by Twist on `/cmd_vel` (e.g. the Go2). |
-| `WHEELBASE` | 0.33 | Distance between front and rear axles in metres, for converting turns to steering angles. |
-| `MAX_STEERING` | 0.34 | Steering limit in radians. A sharper turn becomes a wider curve. |
+| `WHEELBASE` | 0.25 | Distance between front and rear axles in metres, for converting turns to steering angles. |
+| `MAX_STEERING` | 0.28 | Steering limit in radians (car2's servo allows about 0.29). A sharper turn becomes a wider curve. |
 | `CMD_VEL_TOPIC` | /cmd_vel | Where speed commands go, if the robot uses another name. |
 | `ODOM_TOPIC` | /odom | Where the robot reports its position, e.g. `/odom_combined`. |
 
@@ -63,6 +63,29 @@ Put them in front of `start.sh`, for example `MAX_SPEED=0.2 bash robot/start.sh`
 The race car runs the F1TENTH software (`f1tenth_stack`, VESC motor controller, `ackermann_mux`). It is steered with `AckermannDriveStamped` messages (speed and steering angle) on `/drive`, not with Twist on `/cmd_vel`. `twist_to_ackermann_node.py` converts between them: steering angle = atan(wheelbase x turning rate / speed), limited to `MAX_STEERING`. It only sends while fresh commands arrive, so if `cmd_vel_node.py` stops for any reason the car is sent zero speed.
 
 The car's ROS 2 channel is set in its `~/.bashrc` (`ROS_DOMAIN_ID=2`, CycloneDDS). ssh commands do not read that file, so the scripts load these two lines from it; otherwise our nodes and the car's driver would not see each other.
+
+## First test with car2, step by step
+
+Read from the car's own settings (`f1tenth_stack/config`, 30 October 2026):
+
+- `ackermann_mux` takes our commands on `drive` (priority 10, 0.2 s timeout) and the joystick on `teleop` (priority 100). **The joystick always wins.**
+- **Our commands only reach the motors while someone holds joystick button 5 (usually RB).** Releasing it stops the car. Without the button, the joystick's `default` mapping sends its sticks instead, and **the left stick drives at up to 2 m/s without any button**: do not touch the sticks.
+- Wheelbase 0.25 m; the steering servo allows about 0.29 rad.
+
+Steps, with the mentor present:
+
+1. **Wheels off the ground first.** Put the car on a box so the wheels spin freely. The first commands then only show that the wheels turn and steer the right way, and nothing can drive off.
+2. **Terminal app, window 1: start the car's driver.**
+   ```bash
+   ssh car2@192.168.123.95
+   ros2 launch f1tenth_stack bringup_launch.py
+   ```
+   Leave it running. If it reports it cannot open the VESC (motor controller), tell the mentor: its settings name `/dev/ttyACM1`, but the controller showed up as `/dev/ttyACM0`.
+3. **Terminal app, window 2: check.** `bash robot/check.sh` should now list `/drive` and `/odom` with a message rate.
+4. **Start typing:** `bash robot/start.sh` (speed 0.3 m/s by default).
+5. **Hold button 5 on the joystick**, then type `Drive forward half a metre.` The wheels should spin forward and stop. Try `Turn left 45 degrees.` (wheels steer left and spin), then a stop with an empty line.
+6. **Only then on the floor**, in a clear area of at least 3 x 3 m, with the joystick holder ready to let go of button 5.
+7. **To stop at any time:** let go of button 5, press Enter on an empty line, or Ctrl+C. Finish with `quit`, then Ctrl+C in window 1.
 
 ## Safety behaviour
 

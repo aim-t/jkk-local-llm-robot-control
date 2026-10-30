@@ -11,7 +11,7 @@ eval "$(grep -E '^[[:space:]]*export[[:space:]]+(ROS_DOMAIN_ID|RMW_IMPLEMENTATIO
 
 : "${OLLAMA_URL:?OLLAMA_URL must point at the Mac running ollama}"
 : "${MAX_SPEED:=0.3}" "${TURN_RADIUS:=1.0}" "${VEHICLE:=car}" "${CMD_VEL_TOPIC:=/cmd_vel}" "${ODOM_TOPIC:=/odom}"
-: "${DRIVE_TOPIC:=}" "${WHEELBASE:=0.33}" "${MAX_STEERING:=0.34}"
+: "${DRIVE_TOPIC:=}" "${WHEELBASE:=0.25}" "${MAX_STEERING:=0.28}"
 # With DRIVE_TOPIC set, the robot listens there (F1TENTH: /drive) and the converter feeds it.
 LISTEN_TOPIC="${DRIVE_TOPIC:-$CMD_VEL_TOPIC}"
 

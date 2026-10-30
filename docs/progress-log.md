@@ -464,3 +464,14 @@ Two problems for our code, both fixed:
 | Drive forward three metres, then empty line | stopped after 0.37 m |
 
 Largest steering angle sent: 0.319 rad. Killing `cmd_vel_node.py` with `kill -9` mid-drive: the converter sent zero speed and the stand-in car stopped.
+
+## 30 October 2026: car2's driver settings
+
+From `f1tenth_stack/config` on the car (read-only):
+
+- Driver: `ros2 launch f1tenth_stack bringup_launch.py`.
+- `ackermann_mux`: `drive` (navigation, priority 10, timeout 0.2 s) and `teleop` (joystick, priority 100). The converter publishes at 20 Hz, inside the timeout.
+- `joy_teleop`: `autonomous_control` has deadman button 5, so navigation commands only pass while it is held; `human_control` has deadman button 4. The `default` mapping drives from the sticks (speed scale 2.0) with no deadman.
+- `vesc_to_odom` wheelbase 0.25 m; servo range 0.15 to 0.85 with gain -1.2135 and offset 0.5, about +/-0.29 rad of steering. Converter defaults changed to wheelbase 0.25 m and steering limit 0.28 rad (was 0.33 m and 0.34 rad). A 1 m turn radius needs 0.245 rad.
+- Possible problem: `vesc.yaml` names `/dev/ttyACM1`, but the motor controller is at `/dev/ttyACM0`.
+- `vesc_to_odom` calculates turning from the commanded steering, not from a gyro, so measured turn angles may be less accurate than distances.

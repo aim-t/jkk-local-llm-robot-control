@@ -14,7 +14,7 @@ Safety:
   also stops the car.
 
 Runs on the robot (started by run_on_robot.sh):
-    python3 twist_to_ackermann_node.py --ros-args -p wheelbase:=0.33 -p max_steering_angle:=0.34
+    python3 twist_to_ackermann_node.py --ros-args -p wheelbase:=0.25 -p max_steering_angle:=0.28
 """
 
 import math
@@ -34,9 +34,10 @@ ZERO_REPEATS = 5
 class TwistToAckermann(Node):
     def __init__(self):
         super().__init__("twist_to_ackermann")
-        # 0.33 m and 0.34 rad are the usual F1TENTH values; confirm them for this car.
-        self.wheelbase = self.declare_parameter("wheelbase", 0.33).value
-        self.max_steering = self.declare_parameter("max_steering_angle", 0.34).value
+        # car2: wheelbase 0.25 m (vesc_to_odom in its vesc.yaml). Its servo range 0.15-0.85 with gain
+        # -1.2135 and offset 0.5 allows about +/-0.29 rad, so 0.28 rad keeps a small margin.
+        self.wheelbase = self.declare_parameter("wheelbase", 0.25).value
+        self.max_steering = self.declare_parameter("max_steering_angle", 0.28).value
         self.stale_after = self.declare_parameter("stale_after_s", 0.3).value
         drive_topic = self.declare_parameter("drive_topic", "/drive").value
         if not (0.1 <= self.wheelbase <= 1.0 and 0.05 <= self.max_steering <= 0.6):
