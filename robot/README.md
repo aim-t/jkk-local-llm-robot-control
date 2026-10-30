@@ -30,12 +30,14 @@ The language model stays on the Mac; the two ROS 2 nodes and the chat run on the
 
 1. **Join the robot's network** on the Mac (its Wi-Fi or a cable), so the Mac can reach `robot_ip`.
 2. **Start the robot's own driver** the way the lab does, so `/cmd_vel` and `/odom` exist.
-3. **Check the connection** (read-only, changes nothing on the robot):
+3. **If the Mac cannot reach the robot from VS Code** ("No route to host", while the Terminal app can), macOS is blocking VS Code: turn on System Settings > Privacy & Security > Local Network > Visual Studio Code, then quit VS Code with Cmd+Q and reopen it. Until then, run these scripts from the Terminal app.
+4. **Check the connection** (read-only, changes nothing on the robot):
    ```bash
    bash robot/check.sh
    ```
    It shows the robot's ROS 2 version, memory, and whether `/cmd_vel` and `/odom` are there and what types they use.
-4. **Start typing commands:**
+5. **See how the robot's driver is started** (read-only): `bash robot/explore.sh`
+6. **Start typing commands:**
    ```bash
    bash robot/start.sh
    ```

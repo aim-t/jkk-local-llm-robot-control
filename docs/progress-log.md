@@ -437,3 +437,10 @@ The Mac joined the car's network (192.168.123.62). The car at 192.168.123.95 did
 - Confirm the car's driver uses Twist on `/cmd_vel` and publishes `/odom`.
 - The car's minimum turning radius and a safe test speed, to agree with the lab.
 - The password is stored in plain text in `.env.local`; an ssh key would be safer.
+
+## 30 October 2026: first login to the race car
+
+- The Mac could not reach the car from VS Code ("No route to host") while the macOS Terminal app could. Cause: macOS's Local Network privacy setting was blocking VS Code. Running the scripts from the Terminal app works; VS Code needs the Local Network permission and a restart.
+- `robot/check.sh` logged in successfully. The car (`car2`, hostname `ubuntu`) runs Ubuntu 22.04.5 on aarch64 with ROS 2 Humble, Python 3.10.12, 7.4 GB memory (5.4 GB available). No `/cmd_vel` or `/odom` topics were visible: the car's driver was not running.
+- The code was checked against Python 3.10 and Humble. Fix: `rclpy.try_shutdown()` does not exist in Humble, so every node would have ended with an error; replaced with `if rclpy.ok(): rclpy.shutdown()`. The zero-speed-on-disconnect test still passes.
+- Added `robot/explore.sh`, a read-only look at the car's workspaces, launch files and shortcuts, to find how its driver is started.

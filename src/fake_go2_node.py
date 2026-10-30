@@ -74,7 +74,8 @@ def main():
         pass
     finally:
         node.destroy_node()
-        rclpy.try_shutdown()
+        if rclpy.ok():  # rclpy.try_shutdown() exists only from ROS 2 Jazzy; the car runs Humble
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

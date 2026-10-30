@@ -88,7 +88,8 @@ def main():
     executor.shutdown()
     spinner.join(timeout=2.0)
     node.destroy_node()
-    rclpy.try_shutdown()
+    if rclpy.ok():  # rclpy.try_shutdown() exists only from ROS 2 Jazzy; the car runs Humble
+        rclpy.shutdown()
 
 
 if __name__ == "__main__":
