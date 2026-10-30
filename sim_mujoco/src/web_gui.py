@@ -75,6 +75,7 @@ class CommandLog:
         self.entries = []
         self.moving = None  # the entry whose movement is being measured
         self.stop_entry_pending = False
+        self.last_stop_row = 0.0  # a stop sent several times (robot_gui.py) gets one row
 
     def add(self, text, status="waiting for the language model", mode="typed", speech_info=None):
         entry = {"id": len(self.entries) + 1, "text": text, "time": datetime.now().strftime("%H:%M:%S"),
@@ -96,8 +97,12 @@ class CommandLog:
             self.stop_entry_pending = False  # the spoken stop already has its own row
             self.finish_moving(pose, "interrupted by stop")
             return
+        if entry is None and data.get("action") == "stop" and time.monotonic() - self.last_stop_row < 1.0:
+            return  # the same stop arriving again
         if entry is None:  # e.g. the Stop button, which does not go through the model
             entry = self.add("(stop button)" if data.get("action") == "stop" else "(sent from elsewhere)")
+            if data.get("action") == "stop":
+                self.last_stop_row = time.monotonic()
         entry["model_s"] = round(time.monotonic() - entry["sent"], 2)
 
         if kind == "blocked":

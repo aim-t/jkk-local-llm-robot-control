@@ -475,3 +475,19 @@ From `f1tenth_stack/config` on the car (read-only):
 - `vesc_to_odom` wheelbase 0.25 m; servo range 0.15 to 0.85 with gain -1.2135 and offset 0.5, about +/-0.29 rad of steering. Converter defaults changed to wheelbase 0.25 m and steering limit 0.28 rad (was 0.33 m and 0.34 rad). A 1 m turn radius needs 0.245 rad.
 - Possible problem: `vesc.yaml` names `/dev/ttyACM1`, but the motor controller is at `/dev/ttyACM0`.
 - `vesc_to_odom` calculates turning from the commanded steering, not from a gyro, so measured turn angles may be less accurate than distances.
+
+## 30 October 2026: web page for the real robot
+
+`bash robot/start_gui.sh` starts the robot side as before, plus `robot/robot_bridge_node.py` on the robot, and opens the existing web console on the Mac (`robot/robot_gui.py`, reusing `sim_mujoco/src/web_gui.py`, its command history and speech input). The Mac sends UDP to the robot on port 9871 and the robot answers. The page switches to "robot mode": no camera view, path and position from `/odom`, the robot's name in the header.
+
+Test with the stand-in F1TENTH car on domain 2 and the real language model:
+
+| Typed on the page | Result |
+|---|---|
+| Drive forward one metre. | 1.01 m, worked |
+| Turn left 90 degrees. | 90.4 degrees, worked |
+| Drive 2 km. | refused by the safety check |
+| Drive forward three metres, then STOP | stopped after 0.38 m |
+| Page killed with `kill -9` during a 3 m drive | the bridge sent a stop after the page went silent; the car stood still |
+
+Fixed on the way: the page sends a stop three times in case UDP drops one, which created three history rows; repeats within a second now share one row.

@@ -87,7 +87,7 @@
 
 <main>
   <div class="stack">
-    <section class="panel">
+    <section class="panel" id="feed-panel">
       <h2>Live view</h2>
       <img id="feed" alt="Live camera view of the simulated Go2">
     </section>
@@ -136,8 +136,8 @@
         <div class="tile"><div class="label">Turn rate</div><div class="value" id="m-turn">–</div><div class="sub" id="m-turn-cmd"></div></div>
         <div class="tile"><div class="label">Heading</div><div class="value" id="m-heading">–</div><div class="sub">0° = start direction</div></div>
         <div class="tile"><div class="label">Position</div><div class="value" id="m-pos">–</div><div class="sub">x, y in metres</div></div>
-        <div class="tile"><div class="label">Body height</div><div class="value" id="m-height">–</div><div class="sub">metres</div></div>
-        <div class="tile"><div class="label">Falls</div><div class="value" id="m-falls">–</div><div class="sub" id="m-fps"></div></div>
+        <div class="tile"><div class="label" id="m-height-label">Body height</div><div class="value" id="m-height">–</div><div class="sub" id="m-height-sub">metres</div></div>
+        <div class="tile" id="falls-tile"><div class="label">Falls</div><div class="value" id="m-falls">–</div><div class="sub" id="m-fps"></div></div>
       </div>
     </section>
   </div>
@@ -174,8 +174,10 @@ for (const example of EXAMPLES) {
 }
 
 // Live picture: ask for the next frame as soon as the previous one has arrived.
-let frameUrl = null;
+// With a real robot (robotMode) there is no camera, so no frames are requested.
+let frameUrl = null, robotMode = false;
 async function nextFrame() {
+  if (robotMode) return;
   try {
     const response = await fetch("/frame.png?t=" + Date.now());
     if (response.ok) {
@@ -389,7 +391,17 @@ async function poll() {
     const L = s.live;
     $("bridge").textContent = s.bridge ? "ROS 2 connected" : "ROS 2 not connected";
     $("bridge").className = "badge" + (s.bridge ? " on" : "");
-    $("meta").textContent = `MuJoCo simulation · ${L.sim_time} s`;
+    if (s.mode === "robot" && !robotMode) {
+      robotMode = true;  // switch the page over to the real robot once
+      document.querySelector("h1").textContent = `${s.robot} Command Console`;
+      document.title = `${s.robot} Command Console`;
+      $("feed-panel").hidden = true;
+      $("falls-tile").hidden = true;
+      $("reset").textContent = "Clear path"; $("reset").title = "Clear the path drawn on the map";
+      $("m-height-label").textContent = "Position report age"; $("m-height-sub").textContent = "seconds since the last /odom";
+    }
+    $("bridge").textContent = robotMode ? (s.bridge ? `${s.robot} connected` : `${s.robot} not connected`) : $("bridge").textContent;
+    $("meta").textContent = robotMode ? `Real robot · ${L.sim_time} s` : `MuJoCo simulation · ${L.sim_time} s`;
     if (s.speech !== "ready" && !recording && !busy) {
       $("mic").disabled = true; $("mic").textContent = `Speech model ${s.speech}…`;
     } else if (s.speech === "ready" && $("mic").disabled && !busy) {
@@ -401,7 +413,7 @@ async function poll() {
     $("m-turn-cmd").textContent = `asked ${L.cmd_turn.toFixed(2)} rad/s`;
     $("m-heading").textContent = `${L.heading_deg.toFixed(0)}°`;
     $("m-pos").textContent = `${L.x.toFixed(1)}, ${L.y.toFixed(1)}`;
-    $("m-height").textContent = L.height.toFixed(2);
+    $("m-height").textContent = robotMode ? (L.odom_age === null || L.odom_age === undefined ? "–" : L.odom_age.toFixed(2)) : L.height.toFixed(2);
     $("m-falls").textContent = L.falls;
     $("m-fps").textContent = `video ${L.fps} frames/s`;
     renderLatest(s.log[0]);

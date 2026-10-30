@@ -1,6 +1,7 @@
 #!/bin/bash
 # Step 2: copy the code to the robot and type commands to it.
-#     bash robot/start.sh
+#     bash robot/start.sh          type commands in this terminal
+#     GUI=1 bash robot/start.sh    use the web page instead (or robot/start_gui.sh)
 # Optional settings:  MAX_SPEED=0.3 TURN_RADIUS=1.0 VEHICLE=car CMD_VEL_TOPIC=/cmd_vel ODOM_TOPIC=/odom
 #                     DRIVE_TOPIC=/drive (F1TENTH cars; 'none' to send Twist straight to CMD_VEL_TOPIC)
 #                     WHEELBASE=0.25 MAX_STEERING=0.28 (car2's values, from its vesc.yaml)
@@ -59,11 +60,33 @@ echo "Copying the code to ~/$REMOTE_DIR on the robot (code only, never .env.loca
 robot_ssh "mkdir -p ~/$REMOTE_DIR" || exit 1
 robot_scp "$PROJECT/src/run_benchmark.py" "$PROJECT/src/safety.py" "$PROJECT/src/go2_command_node.py" \
           "$PROJECT/src/cmd_vel_node.py" "$PROJECT/src/chat.py" "$PROJECT/src/send.py" "$ROBOT_DIR/run_on_robot.sh" \
-          "$ROBOT_DIR/twist_to_ackermann_node.py" \
+          "$ROBOT_DIR/twist_to_ackermann_node.py" "$ROBOT_DIR/robot_bridge_node.py" \
           "$ROBOT_USER@$ROBOT_IP:$REMOTE_DIR/" || exit 1
 
-echo "Starting on the robot. Type commands; empty line = stop, quit = leave."
-robot_ssh_tty "OLLAMA_URL=http://$MAC_IP:11434 MAX_SPEED=$MAX_SPEED TURN_RADIUS=$TURN_RADIUS \
+REMOTE_COMMAND="OLLAMA_URL=http://$MAC_IP:11434 MAX_SPEED=$MAX_SPEED TURN_RADIUS=$TURN_RADIUS \
     VEHICLE=$VEHICLE CMD_VEL_TOPIC=$CMD_VEL_TOPIC ODOM_TOPIC=$ODOM_TOPIC \
-    DRIVE_TOPIC=$DRIVE_TOPIC WHEELBASE=$WHEELBASE MAX_STEERING=$MAX_STEERING \
-    bash ~/$REMOTE_DIR/run_on_robot.sh"
+    DRIVE_TOPIC=$DRIVE_TOPIC WHEELBASE=$WHEELBASE MAX_STEERING=$MAX_STEERING"
+
+if [ "${GUI:-0}" = 1 ]; then
+    GUI_PYTHON="$PROJECT/sim_mujoco/.venv/bin/python"
+    [ -x "$GUI_PYTHON" ] || { echo "The web page needs sim_mujoco/.venv (see sim_mujoco/README.md)."; exit 1; }
+    echo "Starting the nodes on the robot..."
+    # -tt gives the robot side a terminal, so closing this connection also stops the nodes there.
+    ssh -tt "${SSH_OPTS[@]}" "$ROBOT_USER@$ROBOT_IP" "GUI=1 $REMOTE_COMMAND bash ~/$REMOTE_DIR/run_on_robot.sh" \
+        > /tmp/llm_robot_session.log 2>&1 < /dev/null &
+    SSH_PID=$!
+    trap 'kill $SSH_PID 2>/dev/null; [ -n "${OLLAMA_PID:-}" ] && kill $OLLAMA_PID 2>/dev/null; echo "Stopped."' EXIT
+    for _ in $(seq 1 90); do
+        grep -q "Waiting for the web page" /tmp/llm_robot_session.log && break
+        kill -0 $SSH_PID 2>/dev/null || { echo "The robot side stopped:"; cat /tmp/llm_robot_session.log; exit 1; }
+        sleep 1
+    done
+    grep -q "Waiting for the web page" /tmp/llm_robot_session.log || { echo "The robot side did not start:"; cat /tmp/llm_robot_session.log; exit 1; }
+    [ -z "${NO_BROWSER:-}" ] && (sleep 3; open http://localhost:8765) &
+    echo "Robot side running (log: /tmp/llm_robot_session.log). Opening the page."
+    "$GUI_PYTHON" "$ROBOT_DIR/robot_gui.py" "$ROBOT_IP" "${ROBOT_NAME:-robot}"
+    exit 0
+fi
+
+echo "Starting on the robot. Type commands; empty line = stop, quit = leave."
+robot_ssh_tty "$REMOTE_COMMAND bash ~/$REMOTE_DIR/run_on_robot.sh"

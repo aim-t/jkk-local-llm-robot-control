@@ -43,6 +43,12 @@ The language model stays on the Mac; the two ROS 2 nodes and the chat run on the
    ```
    It starts the language model on the Mac so the robot can reach it, copies the code, and opens the chat on the robot. An empty line stops the robot at once; `quit` stops the nodes and sends zero speed.
 
+## The web page for a real robot
+
+`bash robot/start_gui.sh` does everything `start.sh` does, then starts `robot_bridge_node.py` on the robot instead of the terminal chat, and opens the same web page as the simulation (`robot_gui.py`, which needs the `sim_mujoco` folder and its Python). Type or speak commands there. The page shows the robot's position and path from `/odom`, its speed against the commanded speed, and for each command what the model understood, the target, what was achieved and whether it worked. There is no camera view.
+
+The Mac only sends to the robot (UDP port 9871); the robot answers. If the page stops sending for 1.5 s while the robot is moving, the bridge on the robot sends a stop.
+
 ## Settings
 
 Put them in front of `start.sh`, for example `MAX_SPEED=0.2 bash robot/start.sh`.
@@ -82,10 +88,10 @@ Steps, with the mentor present:
    ```
    Leave it running. If it reports it cannot open the VESC (motor controller), tell the mentor: its settings name `/dev/ttyACM1`, but the controller showed up as `/dev/ttyACM0`.
 3. **Terminal app, window 2: check.** `bash robot/check.sh` should now list `/drive` and `/odom` with a message rate.
-4. **Start typing:** `bash robot/start.sh` (speed 0.3 m/s by default).
-5. **Hold button 5 on the joystick**, then type `Drive forward half a metre.` The wheels should spin forward and stop. Try `Turn left 45 degrees.` (wheels steer left and spin), then a stop with an empty line.
+4. **Start the web page:** `bash robot/start_gui.sh` (speed 0.3 m/s by default). The browser opens at http://localhost:8765 and the header shows "car2 connected". Prefer the terminal? `bash robot/start.sh` instead.
+5. **Hold button 5 on the joystick**, then type (or speak) `Drive forward half a metre.` The wheels should spin forward and stop. Try `Turn left 45 degrees.` (wheels steer left and spin), then a stop with an empty line.
 6. **Only then on the floor**, in a clear area of at least 3 x 3 m, with the joystick holder ready to let go of button 5.
-7. **To stop at any time:** let go of button 5, press Enter on an empty line, or Ctrl+C. Finish with `quit`, then Ctrl+C in window 1.
+7. **To stop at any time:** let go of button 5, or press STOP on the page (empty line in the terminal chat). Closing the page or losing Wi-Fi also stops the car within about 1.5 s. Finish with Ctrl+C in window 2, then Ctrl+C in window 1.
 
 ## Safety behaviour
 
@@ -97,6 +103,7 @@ Checked on 30 October 2026 with a stand-in robot in Docker:
 | Empty line or "stop" in the chat | Stop sent directly, without the language model |
 | Command over 5 m or 180 degrees, unreadable, or not a finite number, even if published by another program | Refused by `cmd_vel_node.py`, zero speed sent |
 | Speed setting above 1.5 m/s or 2.0 rad/s, or not positive, at start or while running | Rejected |
+| Web page closed or Mac disconnected mid-drive | `robot_bridge_node.py` sends a stop after 1.5 s of silence |
 | `cmd_vel_node.py` dies without warning (F1TENTH) | The converter notices the missing commands and sends zero speed |
 | ssh connection drops (e.g. Wi-Fi lost) while driving | `cmd_vel_node.py` sends zero speed and exits |
 | Chat ended with `quit`, or the script is stopped | Stop sent, then both nodes stopped, zero speed on shutdown |
