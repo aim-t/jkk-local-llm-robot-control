@@ -14,6 +14,7 @@ robot_ssh 'bash -s' <<'REMOTE'
 for f in /opt/ros/*/setup.bash ~/ros2_ws/install/setup.bash ~/*_ws/install/setup.bash; do [ -f "$f" ] && source "$f"; done
 # ssh commands do not read ~/.bashrc, where the robot's ROS 2 channel is set.
 eval "$(grep -E '^[[:space:]]*export[[:space:]]+(ROS_DOMAIN_ID|RMW_IMPLEMENTATION|CYCLONEDDS_URI)=' ~/.bashrc 2>/dev/null)"
+ros2 daemon stop >/dev/null 2>&1  # the ros2 command's helper may remember old settings; it restarts by itself
 echo "hostname:      $(hostname)"
 echo "system:        $(. /etc/os-release; echo "$PRETTY_NAME") on $(uname -m)"
 echo "ROS 2:         ${ROS_DISTRO:-not found} (ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-unset}, RMW=${RMW_IMPLEMENTATION:-default})"

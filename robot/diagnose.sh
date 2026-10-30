@@ -6,6 +6,7 @@ source "$(dirname "$0")/env.sh"
 robot_ssh 'bash -s' <<'REMOTE'
 for f in /opt/ros/*/setup.bash ~/ros2_ws/install/setup.bash; do [ -f "$f" ] && source "$f"; done
 eval "$(grep -E '^[[:space:]]*export[[:space:]]+(ROS_DOMAIN_ID|RMW_IMPLEMENTATION|CYCLONEDDS_URI)=' ~/.bashrc 2>/dev/null)"
+ros2 daemon stop >/dev/null 2>&1  # the ros2 command's helper may remember old settings; it restarts by itself
 section() { echo; echo "=== $1 ==="; }
 
 section "ROS 2 channel"

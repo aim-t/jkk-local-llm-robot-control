@@ -8,6 +8,7 @@ for f in /opt/ros/*/setup.bash ~/ros2_ws/install/setup.bash ~/*_ws/install/setup
 # commands do not read. Without the same values, our nodes and the robot's driver never see
 # each other.
 eval "$(grep -E '^[[:space:]]*export[[:space:]]+(ROS_DOMAIN_ID|RMW_IMPLEMENTATION|CYCLONEDDS_URI)=' ~/.bashrc 2>/dev/null)"
+ros2 daemon stop >/dev/null 2>&1  # the ros2 command's helper may remember old settings; it restarts by itself
 
 : "${OLLAMA_URL:?OLLAMA_URL must point at the Mac running ollama}"
 : "${MAX_SPEED:=0.3}" "${TURN_RADIUS:=1.0}" "${VEHICLE:=car}" "${CMD_VEL_TOPIC:=/cmd_vel}" "${ODOM_TOPIC:=/odom}"

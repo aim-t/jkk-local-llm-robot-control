@@ -491,3 +491,12 @@ Test with the stand-in F1TENTH car on domain 2 and the real language model:
 | Page killed with `kill -9` during a 3 m drive | the bridge sent a stop after the page went silent; the car stood still |
 
 Fixed on the way: the page sends a stop three times in case UDP drops one, which created three history rows; repeats within a second now share one row.
+
+## 30 October 2026: first start of car2's driver
+
+`robot/start_gui.sh` connected, copied the code, then refused to start because `/odom` was missing. Nothing moved. From the driver output and `robot/diagnose.sh`:
+
+- `vesc_driver_node`: "Failed to open the serial port /dev/ttyACM1 to the VESC". The VESC is at `/dev/ttyACM0` (`usb-STMicroelectronics_ChibiOS_RT_Virtual_COM_Port`), but `f1tenth_stack/config/vesc.yaml` names `/dev/ttyACM1`. Without the VESC driver there is no `/odom` and no motor output. The user `car2` is in `dialout`, so permissions are not the problem.
+- `urg_node`: the Hokuyo lidar at 192.168.0.10 could not be reached. Not needed for driving with commands.
+- The lab's bringup also starts `controller_receiver` (a virtual controller listening on port 5005) and its own `teleop_joy`, which logged "Unsubscribed from /drive topic". How autonomous `/drive` commands are enabled on this car is still to be confirmed with the mentor.
+- `ros2 node list` over ssh found no nodes although they were running, probably a stale ros2 daemon. `check.sh`, `diagnose.sh` and `run_on_robot.sh` now run `ros2 daemon stop` first.
