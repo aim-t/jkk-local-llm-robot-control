@@ -36,7 +36,17 @@ for p in problems: print("Setting not accepted:", p)
 sys.exit(1 if problems else 0)
 CHECK
 
-ping -c 2 -t 4 "$ROBOT_IP" >/dev/null 2>&1 || { echo "Robot not reachable. Join its network, then run robot/check.sh."; exit 1; }
+if ! ping -c 2 -t 4 "$ROBOT_IP" >/dev/null 2>&1; then
+    echo "Robot not reachable at $ROBOT_IP."
+    if [ "${TERM_PROGRAM:-}" = vscode ]; then
+        echo "You are in VS Code's terminal, which macOS may block from the local network."
+        echo "Run this in the Terminal app instead, or give VS Code the Local Network permission"
+        echo "(System Settings > Privacy & Security > Local Network), then quit VS Code with Cmd+Q and reopen it."
+    else
+        echo "Check that the Mac is on the robot's network and the robot is switched on, then run robot/check.sh."
+    fi
+    exit 1
+fi
 
 # The robot reaches the language model on this Mac, through the network interface that leads to it.
 # Everything this script starts is stopped again when it ends (Ctrl+C, the page's Shut down
