@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Go2 Command Console</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #ffffff; --ink: #1c1f24; --muted: #646b76; --line: #dfe2e7;
+    --accent: #2f6fdf; --ok: #1d8a4e; --ok-bg: #e3f4ea; --bad: #c2362d; --bad-bg: #fbe7e5;
+    --warn: #9a6400; --warn-bg: #fdf1d8; --info-bg: #e7eefb; --stop: #d33a2c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121418; --panel: #1b1e24; --ink: #e8eaee; --muted: #9aa2ad; --line: #2c3038;
+      --accent: #6b9cf2; --ok: #5cc98a; --ok-bg: #173324; --bad: #f07a70; --bad-bg: #3a1d1b;
+      --warn: #e7b04b; --warn-bg: #3a2d12; --info-bg: #1c2840; --stop: #e0493b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line);
+           background: var(--panel); }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  .badge { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--bad-bg); color: var(--bad); }
+  .badge.on { background: var(--ok-bg); color: var(--ok); }
+  .spacer { flex: 1; }
+  .small { color: var(--muted); font-size: 12px; }
+  main { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: 16px; padding: 16px 20px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  .panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
+              margin: 0 0 10px; font-weight: 600; }
+  .stack { display: grid; gap: 16px; align-content: start; }
+  #feed { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 8px; background: #000; object-fit: cover; }
+  #map { width: 100%; height: 240px; display: block; border-radius: 8px; background: var(--bg); }
+  form { display: flex; gap: 8px; }
+  input[type=text] { flex: 1; min-width: 0; padding: 10px 12px; font-size: 15px; border-radius: 8px;
+                     border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+           padding: 9px 14px; cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.stop { background: var(--stop); border-color: var(--stop); color: #fff; font-weight: 700; flex: 1; padding: 12px; }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip { font-size: 12px; padding: 5px 10px; border-radius: 999px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tile { background: var(--bg); border-radius: 8px; padding: 9px 10px; }
+  .tile .label { font-size: 11px; color: var(--muted); }
+  .tile .value { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tile .sub { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #latest { border-radius: 8px; padding: 12px; background: var(--bg); }
+  #latest .verdict { font-size: 20px; font-weight: 700; }
+  #latest .detail { color: var(--muted); margin-top: 4px; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); } .info { color: var(--accent); }
+  .history { grid-column: 1 / -1; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; font-variant-numeric: tabular-nums; }
+  .pill { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .pill.ok { background: var(--ok-bg); } .pill.bad { background: var(--bad-bg); }
+  .pill.warn { background: var(--warn-bg); } .pill.info { background: var(--info-bg); }
+  .empty { color: var(--muted); padding: 14px 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Go2 Command Console</h1>
+  <span id="bridge" class="badge">ROS 2 not connected</span>
+  <span class="spacer"></span>
+  <span class="small" id="meta">MuJoCo simulation</span>
+</header>
+
+<main>
+  <div class="stack">
+    <section class="panel">
+      <h2>Live view</h2>
+      <img id="feed" alt="Live camera view of the simulated Go2">
+    </section>
+    <section class="panel">
+      <h2>Path seen from above <span class="small">(grid = 1 m)</span></h2>
+      <canvas id="map"></canvas>
+    </section>
+  </div>
+
+  <div class="stack">
+    <section class="panel">
+      <h2>Command</h2>
+      <form id="form">
+        <input id="text" type="text" placeholder="e.g. Walk forward one metre." autocomplete="off" autofocus>
+        <button class="primary" type="submit">Send</button>
+      </form>
+      <div class="chips" id="chips"></div>
+      <div class="row">
+        <button class="stop" id="stop" title="Stops at once, without the language model">STOP</button>
+        <button id="reset" title="Put the dog back at the start">Reset dog</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Last command</h2>
+      <div id="latest"><div class="verdict info">No command yet</div>
+        <div class="detail">Type a command above or click an example.</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>Live metrics</h2>
+      <div class="tiles">
+        <div class="tile"><div class="label">Forward speed</div><div class="value" id="m-speed">–</div><div class="sub" id="m-speed-cmd"></div></div>
+        <div class="tile"><div class="label">Turn rate</div><div class="value" id="m-turn">–</div><div class="sub" id="m-turn-cmd"></div></div>
+        <div class="tile"><div class="label">Heading</div><div class="value" id="m-heading">–</div><div class="sub">0° = start direction</div></div>
+        <div class="tile"><div class="label">Position</div><div class="value" id="m-pos">–</div><div class="sub">x, y in metres</div></div>
+        <div class="tile"><div class="label">Body height</div><div class="value" id="m-height">–</div><div class="sub">metres</div></div>
+        <div class="tile"><div class="label">Falls</div><div class="value" id="m-falls">–</div><div class="sub" id="m-fps"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel history">
+    <h2>Command history</h2>
+    <table>
+      <thead><tr><th>#</th><th>Time</th><th>You typed</th><th>Model understood</th><th>Model time</th>
+        <th>Target</th><th>Achieved</th><th>Error</th><th>Duration</th><th>Status</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="10" class="empty">Nothing yet.</td></tr></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const EXAMPLES = ["Walk forward one metre.", "Turn left 90 degrees.", "Go back half a metre.",
+                  "Turn right 45 degrees.", "Walk forward 50 metres.", "Make me a cup of coffee.", "Sit down."];
+
+function post(path, body) {
+  return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" },
+                       body: JSON.stringify(body || {}) });
+}
+function send(text) { if (text.trim()) post("/api/command", { text }); }
+
+$("form").addEventListener("submit", (e) => { e.preventDefault(); send($("text").value); $("text").value = ""; });
+$("stop").addEventListener("click", () => post("/api/stop"));
+$("reset").addEventListener("click", () => post("/api/reset"));
+for (const example of EXAMPLES) {
+  const chip = document.createElement("button");
+  chip.className = "chip"; chip.type = "button"; chip.textContent = example;
+  chip.addEventListener("click", () => send(example));
+  $("chips").appendChild(chip);
+}
+
+// Live picture: ask for the next frame as soon as the previous one has arrived.
+let frameUrl = null;
+async function nextFrame() {
+  try {
+    const response = await fetch("/frame.png?t=" + Date.now());
+    if (response.ok) {
+      const url = URL.createObjectURL(await response.blob());
+      $("feed").src = url;
+      if (frameUrl) URL.revokeObjectURL(frameUrl);
+      frameUrl = url;
+    }
+  } catch (e) { await new Promise((r) => setTimeout(r, 1000)); }
+  requestAnimationFrame(nextFrame);
+}
+nextFrame();
+
+function describe(a) {
+  if (!a || !a.action) return "–";
+  if (a.action === "move") return `walk ${a.distance_m >= 0 ? "forward" : "backward"} ${Math.abs(a.distance_m)} m`;
+  if (a.action === "turn") return `turn ${a.angle_deg >= 0 ? "left" : "right"} ${Math.abs(a.angle_deg)}°`;
+  return a.action.replace("_", " ");
+}
+function amount(v, unit) { return v === null || v === undefined ? "–" : `${v}${unit === "deg" ? "°" : " m"}`; }
+function verdict(e) {
+  if (e.status === "waiting for the language model") return ["info", "Thinking…"];
+  if (e.status === "moving") return ["info", "Moving…"];
+  if (e.success === true) return ["ok", e.unit ? "Worked" : "Done"];
+  if (e.success === false && e.status === "done") return ["bad", "Off target"];
+  if (e.status.startsWith("refused")) return ["warn", "Refused"];
+  if (e.status.startsWith("not available")) return ["warn", "Not in simulation"];
+  if (e.status.startsWith("interrupted") || e.status.startsWith("replaced")) return ["warn", "Interrupted"];
+  return ["bad", "Failed"];
+}
+
+function renderLatest(e) {
+  if (!e) return;
+  const [cls, word] = verdict(e);
+  let detail = `“${e.text}”`;
+  if (e.answer && e.answer.action) detail += ` → ${describe(e.answer)}`;
+  if (e.model_s !== null) detail += ` · model ${e.model_s} s`;
+  if (e.target !== null) detail += ` · reached ${amount(e.achieved, e.unit)} of ${amount(e.target, e.unit)}`;
+  if (e.reason) detail += ` · ${e.reason}`;
+  if (!["done", "moving", "waiting for the language model"].includes(e.status) && !e.reason) detail += ` · ${e.status}`;
+  $("latest").innerHTML = `<div class="verdict ${cls}">${word}</div><div class="detail"></div>`;
+  $("latest").querySelector(".detail").textContent = detail;
+}
+
+function renderRows(log) {
+  if (!log.length) return;
+  $("rows").innerHTML = "";
+  for (const e of log) {
+    const [cls, word] = verdict(e);
+    const tr = document.createElement("tr");
+    const cells = [e.id, e.time, e.text, e.reason ? "–" : describe(e.answer), e.model_s === null ? "–" : `${e.model_s} s`,
+                   amount(e.target, e.unit), amount(e.achieved, e.unit), amount(e.error, e.unit),
+                   e.duration_s === null ? "–" : `${e.duration_s} s`];
+    for (const c of cells) { const td = document.createElement("td"); td.textContent = c; tr.appendChild(td); }
+    const td = document.createElement("td");
+    const pill = document.createElement("span");
+    pill.className = `pill ${cls}`; pill.textContent = word; pill.title = e.reason || e.status;
+    td.appendChild(pill); tr.appendChild(td);
+    $("rows").appendChild(tr);
+  }
+}
+
+function drawMap(path, live) {
+  const canvas = $("map"), ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr; ctx.scale(dpr, dpr);
+  const css = getComputedStyle(document.documentElement);
+  const pts = path.length ? path : [[0, 0]];
+  let minX = Math.min(...pts.map(p => p[0]), live.x) - 1, maxX = Math.max(...pts.map(p => p[0]), live.x) + 1;
+  let minY = Math.min(...pts.map(p => p[1]), live.y) - 1, maxY = Math.max(...pts.map(p => p[1]), live.y) + 1;
+  const scale = Math.min(w / (maxX - minX), h / (maxY - minY), 120);
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  const toScreen = (x, y) => [w / 2 + (x - cx) * scale, h / 2 - (y - cy) * scale];  // x right, y up
+
+  ctx.strokeStyle = css.getPropertyValue("--line"); ctx.lineWidth = 1;
+  for (let gx = Math.floor(minX - 5); gx <= maxX + 5; gx++) { const [sx] = toScreen(gx, 0); ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, h); ctx.stroke(); }
+  for (let gy = Math.floor(minY - 5); gy <= maxY + 5; gy++) { const [, sy] = toScreen(0, gy); ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(w, sy); ctx.stroke(); }
+
+  const [ox, oy] = toScreen(0, 0);
+  ctx.fillStyle = css.getPropertyValue("--muted"); ctx.beginPath(); ctx.arc(ox, oy, 3, 0, 7); ctx.fill();
+  ctx.strokeStyle = css.getPropertyValue("--accent"); ctx.lineWidth = 2; ctx.beginPath();
+  pts.forEach((p, i) => { const [sx, sy] = toScreen(p[0], p[1]); i ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
+  ctx.stroke();
+
+  const [dx, dy] = toScreen(live.x, live.y), a = live.heading_deg * Math.PI / 180;
+  ctx.fillStyle = css.getPropertyValue("--stop");
+  ctx.beginPath();
+  ctx.moveTo(dx + Math.cos(a) * 12, dy - Math.sin(a) * 12);
+  ctx.lineTo(dx + Math.cos(a + 2.5) * 8, dy - Math.sin(a + 2.5) * 8);
+  ctx.lineTo(dx + Math.cos(a - 2.5) * 8, dy - Math.sin(a - 2.5) * 8);
+  ctx.closePath(); ctx.fill();
+}
+
+async function poll() {
+  try {
+    const s = await (await fetch("/api/state")).json();
+    const L = s.live;
+    $("bridge").textContent = s.bridge ? "ROS 2 connected" : "ROS 2 not connected";
+    $("bridge").className = "badge" + (s.bridge ? " on" : "");
+    $("meta").textContent = `MuJoCo simulation · ${L.sim_time} s`;
+    $("m-speed").textContent = `${L.speed.toFixed(2)} m/s`;
+    $("m-speed-cmd").textContent = `asked ${L.cmd_speed.toFixed(2)} m/s`;
+    $("m-turn").textContent = `${L.turn_rate.toFixed(2)} rad/s`;
+    $("m-turn-cmd").textContent = `asked ${L.cmd_turn.toFixed(2)} rad/s`;
+    $("m-heading").textContent = `${L.heading_deg.toFixed(0)}°`;
+    $("m-pos").textContent = `${L.x.toFixed(1)}, ${L.y.toFixed(1)}`;
+    $("m-height").textContent = L.height.toFixed(2);
+    $("m-falls").textContent = L.falls;
+    $("m-fps").textContent = `video ${L.fps} frames/s`;
+    renderLatest(s.log[0]);
+    renderRows(s.log);
+    drawMap(s.path, L);
+  } catch (e) {
+    $("bridge").textContent = "Page server not running"; $("bridge").className = "badge";
+  }
+  setTimeout(poll, 250);
+}
+poll();
+</script>
+</body>
+</html>
