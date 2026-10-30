@@ -540,3 +540,28 @@ Test in the simulation (port 8766, `GUI_PORT` is new):
 | STOP during a 3 m walk | stopped at 0.98 m |
 
 During testing, port 8765 was already used by the user's own running car console, so the first test commands went to it; it showed "not sent: the robot is not connected" (the car was offline), so nothing reached the car.
+
+## 30 October 2026: commands ending late on the real car
+
+The user saw the car finish a "walk forward one metre", typed the next command, and the history showed the first as interrupted. car2's movement log explained it:
+
+- move 1.0 m: "time limit reached before the target; measured 0.84 m"
+- turn 90 degrees: measured 81.55 degrees, time limit
+- back 0.5 m: measured 0.34 m, time limit
+
+Cause: `cmd_vel_node.py` lowers the speed near the target (down to 0.1 m/s) to avoid overshoot. car2's motor stops turning at such low speeds (0.3 m/s is already close to its minimum), so the car stood still about 15 cm short while the node kept asking for a small speed until its time limit (about 9 s for 1 m). A new command in that time replaced the old one.
+
+Fixes:
+
+- New parameter `slow_down` (default true). `run_on_robot.sh` sets it to false for cars, which then drive at the set speed to the target and stop.
+- New stall check `stall_timeout_s` (default 1.5 s): if the robot makes less than 2 cm or 2 degrees of progress in that time while moving, the command ends at once with "stalled".
+
+Test with the stand-in robot given a motor deadband of 0.2 m/s (no movement below it), 1 m at 0.3 m/s in car mode:
+
+| Setting | Ended after | Result |
+|---|---|---|
+| Before (slow-down, no stall check) | 9.9 s | time limit, 0.88 m |
+| Slow-down with stall check | 6.4 s | stalled, 0.88 m |
+| Car setting (no slow-down) | 4.9 s | target reached, 1.01 m |
+
+(times include about 1 s for the command to be sent.) A car turn of 90 degrees reached 90.6 degrees. The simulated dog was unaffected: 1.00 m reached; its turn and backward walk still end at the time limit, as before (weak turning in the simulation).

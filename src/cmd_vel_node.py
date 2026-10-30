@@ -48,6 +48,8 @@ TIME_LIMIT_EXTRA_S = 2.0
 SLOWDOWN_GAIN = 1.0      # per second
 MIN_LINEAR_SPEED = 0.1   # metres per second
 MIN_ANGULAR_SPEED = 0.15  # radians per second
+STALL_MIN_PROGRESS_M = 0.02     # progress smaller than this does not count as moving
+STALL_MIN_PROGRESS_RAD = 0.035  # about 2 degrees
 # Hard limits for the speed parameters. A request above them is rejected, even while running.
 HARD_MAX_LINEAR_SPEED = 1.5   # metres per second
 HARD_MAX_ANGULAR_SPEED = 2.0  # radians per second
@@ -78,6 +80,12 @@ class CmdVelNode(Node):
         self.declare_parameter("use_odom", True)
         self.declare_parameter("vehicle_type", "legged")  # "legged" turns on the spot, "car" turns while driving
         self.declare_parameter("turn_radius", 1.0)        # metres, car only; must not be below the car's minimum
+        # Slowing down near the target avoids overshoot on the Go2. A car's motor stops turning
+        # below a minimum speed, so with slow_down false it drives at full set speed to the target.
+        self.declare_parameter("slow_down", True)
+        # No progress for this long while moving means the robot is stuck (or below the speed its
+        # motor can manage): the command ends at once instead of waiting for the time limit.
+        self.declare_parameter("stall_timeout_s", 1.5)
         for name in PARAMETER_LIMITS:
             problem = self.parameter_problem(name, self.param(name))
             if problem:
@@ -186,6 +194,8 @@ class CmdVelNode(Node):
             "start_pose": self.pose,
             "last_yaw": self.pose[2] if self.pose else 0.0,
             "turned": 0.0,
+            "best_progress": 0.0,
+            "progress_time": time.monotonic(),
             "base_linear": linear,
             "base_angular": angular,
             "end_time": time.monotonic() + expected_s,
@@ -256,7 +266,15 @@ class CmdVelNode(Node):
             if now >= goal["deadline"]:
                 self.halt("time limit reached before the target")
                 return
-            self.slow_down_near_target(remaining)
+            progress = goal["target"] - remaining
+            if progress > goal["best_progress"] + (STALL_MIN_PROGRESS_M if goal["kind"] == "move"
+                                                   else STALL_MIN_PROGRESS_RAD):
+                goal["best_progress"], goal["progress_time"] = progress, now
+            elif now - goal["progress_time"] > self.param("stall_timeout_s"):
+                self.halt(f"stalled: no progress for {self.param('stall_timeout_s')} s")
+                return
+            if self.param("slow_down"):
+                self.slow_down_near_target(remaining)
         elif now >= goal["end_time"]:
             self.halt("movement time finished")
             return

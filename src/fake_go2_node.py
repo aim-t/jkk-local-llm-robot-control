@@ -32,11 +32,15 @@ class FakeGo2(Node):
         self.target_v = self.target_w = 0.0   # commanded speeds
         self.last_command = 0.0
         self.last_step = time.monotonic()
+        # Test option: like a real motor, do not move at all below this commanded speed.
+        self.deadband = self.declare_parameter("deadband", 0.0).value
         self.get_logger().info("Fake robot publishing /odom")
 
     def on_cmd_vel(self, message):
-        self.target_v = message.linear.x
-        self.target_w = message.angular.z
+        self.target_v = message.linear.x if abs(message.linear.x) >= self.deadband else 0.0
+        self.target_w = message.angular.z if abs(message.angular.z) >= self.deadband or self.target_v else 0.0
+        if self.deadband and self.target_v == 0.0:
+            self.target_w = 0.0  # a car does not turn without driving
         self.last_command = time.monotonic()
 
     def step(self):

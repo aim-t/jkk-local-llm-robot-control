@@ -57,7 +57,9 @@ if [ -n "$DRIVE_TOPIC" ]; then
         -p wheelbase:=$WHEELBASE -p max_steering_angle:=$MAX_STEERING > /tmp/llm_convert.log 2>&1 &
     CONVERT_PID=$!
 fi
-python3 cmd_vel_node.py --ros-args -p vehicle_type:=$VEHICLE -p max_linear_speed:=$MAX_SPEED \
+# Cars: no gradual slow-down near the target (the motor stalls at very low speeds).
+SLOW_DOWN=true; [ "$VEHICLE" = car ] && SLOW_DOWN=false
+python3 cmd_vel_node.py --ros-args -p vehicle_type:=$VEHICLE -p max_linear_speed:=$MAX_SPEED -p slow_down:=$SLOW_DOWN \
     -p turn_radius:=$TURN_RADIUS -r /cmd_vel:=$CMD_VEL_TOPIC -r /odom:=$ODOM_TOPIC > /tmp/llm_cmd_vel.log 2>&1 &
 MOVE_PID=$!
 OLLAMA_URL=$OLLAMA_URL python3 go2_command_node.py > /tmp/llm_language.log 2>&1 &
