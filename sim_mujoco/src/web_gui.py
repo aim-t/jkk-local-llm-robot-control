@@ -197,6 +197,7 @@ class App:
         self.last_cmd_vel = 0.0
         self.reset_requested = False
         self.speech_status = "loading"
+        self.shutdown_requested = False
         self.fps = 0.0
         self.started = time.monotonic()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -234,6 +235,11 @@ class App:
             if self.bridge_connected():
                 self.sock.sendto(json.dumps({"type": "stop"}).encode(), self.bridge)
 
+    def request_shutdown(self):
+        """The page's Shut down button: stop the dog, then end; start_gui.sh removes the rest."""
+        self.send_stop()
+        self.shutdown_requested = True
+
     def bridge_connected(self):
         return self.bridge is not None and time.monotonic() - self.bridge_seen < 1.0
 
@@ -264,7 +270,7 @@ class App:
         camera.distance, camera.elevation, camera.azimuth = 2.2, -20, 135
         step, frames, fps_clock = 0, 0, time.monotonic()
         next_step = time.monotonic()
-        while True:
+        while not self.shutdown_requested:
             now = time.monotonic()
             with self.lock:
                 self.read_network(now)
@@ -391,6 +397,7 @@ def main():
     print(f"Open http://localhost:{WEB_PORT} in your browser. Press Ctrl+C here to stop.", flush=True)
     try:
         app.run()
+        print("Shut down from the web page.", flush=True)
     except KeyboardInterrupt:
         pass
     finally:

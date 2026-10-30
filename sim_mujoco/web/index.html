@@ -120,7 +120,7 @@
       <div class="row">
         <button class="stop" id="stop" title="Stops the movement at once and cancels what the language model is still working on. Everything keeps running for the next command.">STOP</button>
         <button id="reset" title="Put the dog back at the start">Reset dog</button>
-        <button id="shutdown" title="Stop the robot and shut down everything that was started" hidden>Shut down</button>
+        <button id="shutdown" title="Stop the robot and shut down everything that was started">Shut down</button>
       </div>
     </section>
 
@@ -168,12 +168,13 @@ $("form").addEventListener("submit", (e) => { e.preventDefault(); send($("text")
 $("stop").addEventListener("click", () => post("/api/stop"));
 $("reset").addEventListener("click", () => post("/api/reset"));
 $("shutdown").addEventListener("click", async () => {
-  if (!confirm("Stop the robot and shut down everything (nodes, the robot's driver, the language model)?")) return;
+  const what = robotMode ? "nodes, the robot's driver, the language model" : "the simulation, ROS 2 and the language model";
+  if (!confirm(`Stop the robot and shut down everything (${what})?`)) return;
   await post("/api/shutdown");
   document.querySelector("main").innerHTML =
     '<section class="panel" style="grid-column: 1 / -1"><h2>Shut down</h2>' +
     '<p>The robot was told to stop and everything is shutting down. You can close this tab. ' +
-    'Run <code>bash robot/start_gui.sh</code> to start again.</p></section>';
+    'Run <code>bash ' + (robotMode ? 'robot/start_gui.sh' : 'sim_mujoco/start_gui.sh') + '</code> to start again.</p></section>';
 });
 for (const example of EXAMPLES) {
   const chip = document.createElement("button");
@@ -409,7 +410,6 @@ async function poll() {
       $("feed-panel").hidden = true;
       $("falls-tile").hidden = true;
       $("reset").textContent = "Clear path"; $("reset").title = "Clear the path drawn on the map";
-      $("shutdown").hidden = false;
       $("m-height-label").textContent = "Position report age"; $("m-height-sub").textContent = "seconds since the last /odom";
     }
     $("bridge").textContent = robotMode ? (s.bridge ? `${s.robot} connected` : `${s.robot} not connected`) : $("bridge").textContent;
