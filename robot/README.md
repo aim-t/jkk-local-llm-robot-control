@@ -52,8 +52,17 @@ Put them in front of `start.sh`, for example `MAX_SPEED=0.2 bash robot/start.sh`
 | `MAX_SPEED` | 0.3 | Driving speed in m/s. Start low and agree the value with the lab. |
 | `TURN_RADIUS` | 1.0 | Car turns drive on a circle of this radius in metres. Must not be below the car's minimum. |
 | `VEHICLE` | car | `car` turns while driving forward; `legged` turns on the spot (Go2). |
+| `DRIVE_TOPIC` | /drive | F1TENTH cars listen for speed and steering here. Set `none` for robots driven by Twist on `/cmd_vel` (e.g. the Go2). |
+| `WHEELBASE` | 0.33 | Distance between front and rear axles in metres, for converting turns to steering angles. |
+| `MAX_STEERING` | 0.34 | Steering limit in radians. A sharper turn becomes a wider curve. |
 | `CMD_VEL_TOPIC` | /cmd_vel | Where speed commands go, if the robot uses another name. |
 | `ODOM_TOPIC` | /odom | Where the robot reports its position, e.g. `/odom_combined`. |
+
+## F1TENTH cars (car2)
+
+The race car runs the F1TENTH software (`f1tenth_stack`, VESC motor controller, `ackermann_mux`). It is steered with `AckermannDriveStamped` messages (speed and steering angle) on `/drive`, not with Twist on `/cmd_vel`. `twist_to_ackermann_node.py` converts between them: steering angle = atan(wheelbase x turning rate / speed), limited to `MAX_STEERING`. It only sends while fresh commands arrive, so if `cmd_vel_node.py` stops for any reason the car is sent zero speed.
+
+The car's ROS 2 channel is set in its `~/.bashrc` (`ROS_DOMAIN_ID=2`, CycloneDDS). ssh commands do not read that file, so the scripts load these two lines from it; otherwise our nodes and the car's driver would not see each other.
 
 ## Safety behaviour
 
@@ -65,6 +74,7 @@ Checked on 30 October 2026 with a stand-in robot in Docker:
 | Empty line or "stop" in the chat | Stop sent directly, without the language model |
 | Command over 5 m or 180 degrees, unreadable, or not a finite number, even if published by another program | Refused by `cmd_vel_node.py`, zero speed sent |
 | Speed setting above 1.5 m/s or 2.0 rad/s, or not positive, at start or while running | Rejected |
+| `cmd_vel_node.py` dies without warning (F1TENTH) | The converter notices the missing commands and sends zero speed |
 | ssh connection drops (e.g. Wi-Fi lost) while driving | `cmd_vel_node.py` sends zero speed and exits |
 | Chat ended with `quit`, or the script is stopped | Stop sent, then both nodes stopped, zero speed on shutdown |
 | `/odom` stops arriving during a movement | Zero speed |

@@ -444,3 +444,23 @@ The Mac joined the car's network (192.168.123.62). The car at 192.168.123.95 did
 - `robot/check.sh` logged in successfully. The car (`car2`, hostname `ubuntu`) runs Ubuntu 22.04.5 on aarch64 with ROS 2 Humble, Python 3.10.12, 7.4 GB memory (5.4 GB available). No `/cmd_vel` or `/odom` topics were visible: the car's driver was not running.
 - The code was checked against Python 3.10 and Humble. Fix: `rclpy.try_shutdown()` does not exist in Humble, so every node would have ended with an error; replaced with `if rclpy.ok(): rclpy.shutdown()`. The zero-speed-on-disconnect test still passes.
 - Added `robot/explore.sh`, a read-only look at the car's workspaces, launch files and shortcuts, to find how its driver is started.
+
+## 30 October 2026: what is on the race car, and a converter for F1TENTH
+
+`robot/explore.sh` showed that car2 is an NVIDIA Jetson Orin Nano (Super developer kit, L4T R36.4.7) running the F1TENTH software: `f1tenth_stack`, VESC motor controller on `/dev/ttyACM0`, `ackermann_mux`, joystick teleop, particle filter and SLAM, plus the lab's own packages (`race_mode_manager`, `controller_tcp`, `followthegap`, `disparity_extender`). Its `~/.bashrc` sets `ROS_DOMAIN_ID=2` and CycloneDDS. Nothing starts on boot.
+
+Two problems for our code, both fixed:
+
+- **Wrong ROS 2 channel.** ssh commands do not read `~/.bashrc`, so our nodes would have run on domain 0 and never met the car's driver on domain 2. `run_on_robot.sh` and `check.sh` now load `ROS_DOMAIN_ID`, `RMW_IMPLEMENTATION` and `CYCLONEDDS_URI` from it.
+- **Wrong message type.** F1TENTH cars take `AckermannDriveStamped` (speed and steering angle) on `/drive`, not Twist on `/cmd_vel`. New `robot/twist_to_ackermann_node.py` converts: steering = atan(wheelbase x turning rate / speed), wheelbase 0.33 m and steering limit 0.34 rad by default (usual F1TENTH values, not yet confirmed for car2). A turn on the spot is refused. It sends only while fresh Twist messages arrive.
+
+### Test with a stand-in F1TENTH car (bicycle model, domain 2, CycloneDDS)
+
+| Typed | Result |
+|---|---|
+| Drive forward one metre. | 1.00 m |
+| Turn left 90 degrees. | 90.2 degrees |
+| Turn right 45 degrees. | 45.5 degrees |
+| Drive forward three metres, then empty line | stopped after 0.37 m |
+
+Largest steering angle sent: 0.319 rad. Killing `cmd_vel_node.py` with `kill -9` mid-drive: the converter sent zero speed and the stand-in car stopped.
