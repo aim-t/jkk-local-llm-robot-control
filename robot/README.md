@@ -29,7 +29,7 @@ The language model stays on the Mac; the two ROS 2 nodes and the chat run on the
 ## Steps
 
 1. **Join the robot's network** on the Mac (its Wi-Fi or a cable), so the Mac can reach `robot_ip`.
-2. **Start the robot's own driver** the way the lab does, so `/cmd_vel` and `/odom` exist.
+2. **The robot's own driver** must run so its topics exist. For car2, `start.sh` and `start_gui.sh` start it automatically (`robot/driver.sh`); for other robots, start it the way the lab does.
 3. **If the Mac cannot reach the robot from VS Code** ("No route to host", while the Terminal app can), macOS is blocking VS Code: turn on System Settings > Privacy & Security > Local Network > Visual Studio Code, then quit VS Code with Cmd+Q and reopen it. Until then, run these scripts from the Terminal app.
 4. **Check the connection** (read-only, changes nothing on the robot):
    ```bash
@@ -85,8 +85,8 @@ Steps, with the mentor present:
 2. **Start everything with one command:** `bash robot/start_gui.sh` (speed 0.3 m/s by default). It starts the language model on the Mac, the car's driver, and our nodes on the car, then opens the page. The header should show "car2 connected". Prefer the terminal chat? `bash robot/start.sh`.
 3. **If a controller is connected, hold button 4**, then type (or speak) `Drive forward half a metre.` The wheels should spin forward and stop. Try `Turn left 45 degrees.` (wheels steer left and spin), then STOP.
 4. **Only then on the floor**, in a clear area of at least 3 x 3 m.
-6. **To stop the car at any time:** press STOP on the page, let go of button 4 (if a controller is used), or close the page (the car stops within 1.5 s).
-7. **To shut everything down:** press **Shut down** on the page, or Ctrl+C in the terminal. In that order it stops the car and our nodes, then the car's driver, then the language model. A driver that was already running before you started is left running.
+5. **To stop the car at any time:** press STOP on the page, let go of button 4 (if a controller is used), or close the page (the car stops within 1.5 s).
+6. **To shut everything down:** press **Shut down** on the page, or Ctrl+C in the terminal. In that order it stops the car and our nodes, then the car's driver, then the language model. A driver that was already running before you started is left running.
 
 Run all robot scripts from the **Terminal app** unless VS Code has the macOS Local Network permission.
 
