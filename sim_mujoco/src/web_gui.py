@@ -357,6 +357,8 @@ def make_handler(app):
                 app.send_stop()
             elif self.path == "/api/reset":
                 app.reset_requested = True
+            elif self.path == "/api/shutdown" and hasattr(app, "request_shutdown"):
+                app.request_shutdown()  # real robot only: ends the page server, start.sh stops the rest
             else:
                 self.reply(b'{"ok": false}', "application/json", 400)
                 return

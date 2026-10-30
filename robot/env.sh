@@ -23,5 +23,9 @@ SSH_OPTS=(-o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new
 export SSH_ASKPASS="$ROBOT_DIR/askpass.sh" SSH_ASKPASS_REQUIRE=force ENV_FILE
 
 robot_ssh() { ssh "${SSH_OPTS[@]}" "$ROBOT_USER@$ROBOT_IP" "$@"; }
-robot_ssh_tty() { ssh -t "${SSH_OPTS[@]}" "$ROBOT_USER@$ROBOT_IP" "$@"; }  # for interactive use
+# Sessions that run our nodes get their own connection (no sharing), so closing them really hangs
+# (ssh uses the first value of a repeated -o option, so these must come before SSH_OPTS)
+# up and the robot side stops its nodes.
+OWN_CONNECTION=(-o ControlMaster=no -o ControlPath=none)
+robot_ssh_tty() { ssh -t "${OWN_CONNECTION[@]}" "${SSH_OPTS[@]}" "$ROBOT_USER@$ROBOT_IP" "$@"; }  # for interactive use
 robot_scp() { scp "${SSH_OPTS[@]}" "$@"; }

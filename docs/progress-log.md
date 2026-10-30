@@ -510,3 +510,14 @@ With Claude Code running in the Terminal app (VS Code still lacks the macOS Loca
 - Command path: `/drive` -> `ackermann_mux` -> `/ackermann_cmd` -> `ackermann_to_vesc_node` -> VESC.
 - The lab's `teleop_joy.cpp` (not the standard joy_teleop): with a controller, button 4 held lets `/drive` through; otherwise it publishes the sticks to `teleop` and directly to `ackermann_cmd`. Button 3 "kill switch" runs `pkill '/opt/ros/foxy'`, which does nothing on Humble. With no controller connected (no `/joy`), `/drive` reaches the motors with no dead-man switch.
 - Added `robot/driver.sh start|stop|status|log` to run the driver from the Mac with the corrected port.
+
+## 30 October 2026: one command to start everything, one to stop it
+
+`robot/start_gui.sh` now starts, in order: the language model on the Mac, car2's driver (`robot/driver.sh start`, unless it is already running), our nodes on the car, and the page. Pressing **Shut down** on the page, or Ctrl+C in the terminal, stops everything it started in a safe order: the car and our nodes (zero speed), then the driver, then the language model.
+
+Problems found and fixed while testing on the real car (no driving commands were sent):
+
+- The zero-speed wake-up for `/odom` worked by hand but not when started from the page, which runs the car side in a terminal session. `timeout` moves its command to the background, where it could be paused before sending. Now `timeout --foreground` with stdin from `/dev/null`; the wake-up output is logged to `/tmp/llm_wakeup.log` on the car.
+- After Shut down, our four nodes kept running on the car: the session shared one ssh connection with other commands (ControlMaster), so closing it did not hang up. The node session now uses its own connection (the options must come before the shared ones, since ssh uses the first value), and shutdown also stops our nodes on the car explicitly.
+
+Verified on car2: after Shut down and after Ctrl+C (typed into a real pseudo-terminal), no driver and none of our nodes were left on the car, and the page server and language model on the Mac were stopped. The last line of the car's movement log was "zero speed sent (node shutting down)".

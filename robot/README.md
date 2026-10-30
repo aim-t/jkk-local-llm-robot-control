@@ -82,11 +82,11 @@ What car2 actually does (read from its software on 30 October 2026):
 Steps, with the mentor present:
 
 1. **Wheels off the ground first.** Put the car on a box so the wheels spin freely.
-2. **Start the car's driver** from the Mac: `bash robot/driver.sh start`. It should print "Connected to VESC". Check with `bash robot/driver.sh status`.
-3. **Start the web page:** `bash robot/start_gui.sh` (speed 0.3 m/s by default). The header should show "car2 connected". Prefer the terminal? `bash robot/start.sh`.
-4. **If a controller is connected, hold button 4**, then type (or speak) `Drive forward half a metre.` The wheels should spin forward and stop. Try `Turn left 45 degrees.` (wheels steer left and spin), then STOP.
-5. **Only then on the floor**, in a clear area of at least 3 x 3 m.
-6. **To stop at any time:** press STOP on the page, let go of button 4 (if a controller is used), or close the page (the car stops within 1.5 s). Finish with Ctrl+C in the terminal, then `bash robot/driver.sh stop`.
+2. **Start everything with one command:** `bash robot/start_gui.sh` (speed 0.3 m/s by default). It starts the language model on the Mac, the car's driver, and our nodes on the car, then opens the page. The header should show "car2 connected". Prefer the terminal chat? `bash robot/start.sh`.
+3. **If a controller is connected, hold button 4**, then type (or speak) `Drive forward half a metre.` The wheels should spin forward and stop. Try `Turn left 45 degrees.` (wheels steer left and spin), then STOP.
+4. **Only then on the floor**, in a clear area of at least 3 x 3 m.
+6. **To stop the car at any time:** press STOP on the page, let go of button 4 (if a controller is used), or close the page (the car stops within 1.5 s).
+7. **To shut everything down:** press **Shut down** on the page, or Ctrl+C in the terminal. In that order it stops the car and our nodes, then the car's driver, then the language model. A driver that was already running before you started is left running.
 
 Run all robot scripts from the **Terminal app** unless VS Code has the macOS Local Network permission.
 

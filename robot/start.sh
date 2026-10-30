@@ -2,6 +2,8 @@
 # Step 2: copy the code to the robot and type commands to it.
 #     bash robot/start.sh          type commands in this terminal
 #     GUI=1 bash robot/start.sh    use the web page instead (or robot/start_gui.sh)
+# It also starts the robot's driver (robot/driver.sh) and stops everything it started at the end.
+# START_DRIVER=0 leaves the driver alone.
 # Optional settings:  MAX_SPEED=0.3 TURN_RADIUS=1.0 VEHICLE=car CMD_VEL_TOPIC=/cmd_vel ODOM_TOPIC=/odom
 #                     DRIVE_TOPIC=/drive (F1TENTH cars; 'none' to send Twist straight to CMD_VEL_TOPIC)
 #                     WHEELBASE=0.25 MAX_STEERING=0.28 (car2's values, from its vesc.yaml)
@@ -37,6 +39,35 @@ CHECK
 ping -c 2 -t 4 "$ROBOT_IP" >/dev/null 2>&1 || { echo "Robot not reachable. Join its network, then run robot/check.sh."; exit 1; }
 
 # The robot reaches the language model on this Mac, through the network interface that leads to it.
+# Everything this script starts is stopped again when it ends (Ctrl+C, the page's Shut down
+# button, or an error), in a safe order: the robot first, then its driver, then the model.
+SSH_PID="" OLLAMA_PID="" DRIVER_STARTED=0 NODES_STARTED=""
+shutdown() {
+    trap - EXIT INT TERM HUP
+    echo
+    if [ -n "$SSH_PID" ] && kill -0 "$SSH_PID" 2>/dev/null; then
+        echo "Stopping the robot and our nodes on it..."
+        kill "$SSH_PID" 2>/dev/null   # closing the connection makes the robot side send a stop and quit
+        for _ in $(seq 1 10); do kill -0 "$SSH_PID" 2>/dev/null || break; sleep 0.5; done
+    fi
+    if [ -n "$NODES_STARTED" ]; then
+        # Backstop: make sure our nodes on the robot are gone (they send zero speed when stopped).
+        robot_ssh "pkill -TERM -f 'python3 (cmd_vel_node|go2_command_node|twist_to_ackermann_node|robot_bridge_node|chat)\.py'; sleep 2" 2>/dev/null
+        echo "Our nodes on the robot are stopped."
+    fi
+    if [ "$DRIVER_STARTED" = 1 ]; then
+        echo "Stopping the robot's driver..."
+        bash "$ROBOT_DIR/driver.sh" stop
+    fi
+    if [ -n "$OLLAMA_PID" ]; then
+        kill "$OLLAMA_PID" 2>/dev/null
+        echo "Language model stopped."
+    fi
+    echo "Everything stopped."
+}
+trap shutdown EXIT
+trap 'exit 130' INT TERM HUP
+
 IFACE="$(route -n get "$ROBOT_IP" | awk '/interface:/{print $2}')"
 MAC_IP="$(ipconfig getifaddr "$IFACE")"
 echo "This Mac is $MAC_IP on $IFACE."
@@ -49,13 +80,24 @@ if ! curl -s --max-time 2 "http://$MAC_IP:11434/api/version" >/dev/null; then
     echo "Starting the language model so the robot can reach it (OLLAMA_HOST=0.0.0.0)..."
     OLLAMA_HOST=0.0.0.0:11434 ollama serve >/tmp/llm_ollama.log 2>&1 &
     OLLAMA_PID=$!
-    trap 'kill $OLLAMA_PID 2>/dev/null; echo "Language model stopped."' EXIT
     for _ in $(seq 1 20); do curl -s --max-time 2 "http://$MAC_IP:11434/api/version" >/dev/null && break; sleep 1; done
 fi
 
 robot_ssh "curl -s --max-time 4 http://$MAC_IP:11434/api/version >/dev/null" || {
     echo "The robot cannot reach the language model at $MAC_IP:11434. Check the Mac's firewall (allow ollama)."; exit 1; }
 
+# Start the robot's own driver too, unless it is already running (then it is left running).
+if [ "${START_DRIVER:-1}" = 1 ] && [ -f "$ROBOT_DIR/driver.sh" ]; then
+    if bash "$ROBOT_DIR/driver.sh" status | head -1 | grep -q "not running"; then
+        echo "Starting the robot's driver..."
+        bash "$ROBOT_DIR/driver.sh" start || exit 1
+        DRIVER_STARTED=1
+    else
+        echo "The robot's driver is already running; it will be left running at the end."
+    fi
+fi
+
+NODES_STARTED=1
 echo "Copying the code to ~/$REMOTE_DIR on the robot (code only, never .env.local)..."
 robot_ssh "mkdir -p ~/$REMOTE_DIR" || exit 1
 robot_scp "$PROJECT/src/run_benchmark.py" "$PROJECT/src/safety.py" "$PROJECT/src/go2_command_node.py" \
@@ -72,10 +114,9 @@ if [ "${GUI:-0}" = 1 ]; then
     [ -x "$GUI_PYTHON" ] || { echo "The web page needs sim_mujoco/.venv (see sim_mujoco/README.md)."; exit 1; }
     echo "Starting the nodes on the robot..."
     # -tt gives the robot side a terminal, so closing this connection also stops the nodes there.
-    ssh -tt "${SSH_OPTS[@]}" "$ROBOT_USER@$ROBOT_IP" "GUI=1 $REMOTE_COMMAND bash ~/$REMOTE_DIR/run_on_robot.sh" \
+    ssh -tt "${OWN_CONNECTION[@]}" "${SSH_OPTS[@]}" "$ROBOT_USER@$ROBOT_IP" "GUI=1 $REMOTE_COMMAND bash ~/$REMOTE_DIR/run_on_robot.sh" \
         > /tmp/llm_robot_session.log 2>&1 < /dev/null &
     SSH_PID=$!
-    trap 'kill $SSH_PID 2>/dev/null; [ -n "${OLLAMA_PID:-}" ] && kill $OLLAMA_PID 2>/dev/null; echo "Stopped."' EXIT
     for _ in $(seq 1 90); do
         grep -q "Waiting for the web page" /tmp/llm_robot_session.log && break
         kill -0 $SSH_PID 2>/dev/null || { echo "The robot side stopped:"; cat /tmp/llm_robot_session.log; exit 1; }

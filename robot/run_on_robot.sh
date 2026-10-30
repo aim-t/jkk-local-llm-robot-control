@@ -8,7 +8,7 @@ for f in /opt/ros/*/setup.bash ~/ros2_ws/install/setup.bash ~/*_ws/install/setup
 # commands do not read. Without the same values, our nodes and the robot's driver never see
 # each other.
 eval "$(grep -E '^[[:space:]]*export[[:space:]]+(ROS_DOMAIN_ID|RMW_IMPLEMENTATION|CYCLONEDDS_URI)=' ~/.bashrc 2>/dev/null)"
-ros2 daemon stop >/dev/null 2>&1  # the ros2 command's helper may remember old settings; it restarts by itself
+ros2 daemon stop < /dev/null >/dev/null 2>&1  # the ros2 command's helper may remember old settings; it restarts by itself
 
 : "${OLLAMA_URL:?OLLAMA_URL must point at the Mac running ollama}"
 : "${MAX_SPEED:=0.3}" "${TURN_RADIUS:=1.0}" "${VEHICLE:=car}" "${CMD_VEL_TOPIC:=/cmd_vel}" "${ODOM_TOPIC:=/odom}"
@@ -27,18 +27,26 @@ trap 'exit 1' HUP INT TERM   # a dropped ssh connection still runs cleanup and s
 
 echo "ROS 2 channel: ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}, ${RMW_IMPLEMENTATION:-default middleware}"
 # Before anything can move: the robot must report its position, and something must listen.
-if [ -n "$DRIVE_TOPIC" ] && ! timeout 5 ros2 topic echo --once "$ODOM_TOPIC" >/dev/null 2>&1; then
+if [ -n "$DRIVE_TOPIC" ] && ! timeout --foreground 5 ros2 topic echo --once "$ODOM_TOPIC" < /dev/null >/dev/null 2>&1; then
     # F1TENTH: vesc_to_odom only starts publishing after its first steering command. A zero-speed,
-    # straight-ahead command wakes it up without moving the car.
+    # straight-ahead command wakes it up without moving the car. Right after the driver starts,
+    # it may take a few tries; the ros2 command itself also needs a few seconds to start.
     echo "Waking up the position reports with a zero-speed command..."
-    timeout 3 ros2 topic pub -r 10 -t 10 "$DRIVE_TOPIC" ackermann_msgs/msg/AckermannDriveStamped \
-        "{drive: {speed: 0.0, steering_angle: 0.0}}" >/dev/null 2>&1
+    : > /tmp/llm_wakeup.log
+    for attempt in 1 2 3; do
+        # --foreground and < /dev/null: when started from the web page this runs in a terminal
+        # session, where a command moved to the background can be paused before it sends anything.
+        timeout --foreground 10 ros2 topic pub -r 10 -t 20 "$DRIVE_TOPIC" ackermann_msgs/msg/AckermannDriveStamped \
+            "{drive: {speed: 0.0, steering_angle: 0.0}}" < /dev/null >> /tmp/llm_wakeup.log 2>&1
+        timeout --foreground 5 ros2 topic echo --once "$ODOM_TOPIC" < /dev/null >/dev/null 2>&1 && break
+        echo "  not yet (try $attempt of 3)"
+    done
 fi
-if ! timeout 5 ros2 topic echo --once "$ODOM_TOPIC" >/dev/null 2>&1; then
+if ! timeout --foreground 5 ros2 topic echo --once "$ODOM_TOPIC" < /dev/null >/dev/null 2>&1; then
     echo "No position reports on $ODOM_TOPIC. Start the robot's driver first (or set ODOM_TOPIC). Nothing was started."
     exit 1
 fi
-LISTENERS=$(timeout 5 ros2 topic info "$LISTEN_TOPIC" 2>/dev/null | awk '/Subscription count/{print $3}')
+LISTENERS=$(timeout --foreground 5 ros2 topic info "$LISTEN_TOPIC" < /dev/null 2>/dev/null | awk '/Subscription count/{print $3}')
 if [ "${LISTENERS:-0}" -eq 0 ]; then
     echo "Nothing listens on $LISTEN_TOPIC, so the robot would not move. Start its driver first. Nothing was started."
     exit 1

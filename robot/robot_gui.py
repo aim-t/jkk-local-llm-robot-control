@@ -43,6 +43,7 @@ class RobotApp:
         self.frame = b""  # no camera
         self.path = []
         self.reset_requested = False
+        self.shutdown_requested = False
         self.speech_status = "loading"
         self.pose = (0.0, 0.0, 0.0)
         self.velocity = (0.0, 0.0)
@@ -52,6 +53,11 @@ class RobotApp:
         self.started = time.monotonic()
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.setblocking(False)
+
+    def request_shutdown(self):
+        """The page's Shut down button: stop the robot, then end; start.sh stops everything else."""
+        self.send_stop()
+        self.shutdown_requested = True
 
     def bridge_connected(self):
         return time.monotonic() - self.robot_seen < LINK_TIMEOUT_S
@@ -94,7 +100,7 @@ class RobotApp:
     def run(self):
         step = 0
         next_tick = time.monotonic()
-        while True:
+        while not self.shutdown_requested:
             self.send({"type": "hello"})
             with self.lock:
                 self.read_network()
@@ -147,10 +153,12 @@ def main():
     print(f"Open http://localhost:{web_gui.WEB_PORT} in your browser. Press Ctrl+C here to stop.", flush=True)
     try:
         app.run()
+        print("Shut down from the web page.", flush=True)
     except KeyboardInterrupt:
         pass
     finally:
         app.send_stop()
+        time.sleep(0.5)  # let the page see the last answer
         server.shutdown()
 
 
